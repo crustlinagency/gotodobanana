@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Inbox, Trash2, BarChart3 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
 interface SidebarProps {
   selectedListId: string | null;
@@ -26,11 +27,18 @@ export default function Sidebar({
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: lists = [] } = useQuery({
+  const { data: lists = [], isLoading: listsLoading, error: listsError } = useQuery({
     queryKey: ["lists"],
     queryFn: async () => {
-      const result = await List.filter({ archived: false }, "-created_at");
-      return result || [];
+      try {
+        console.log("Fetching lists...");
+        const result = await List.filter({ archived: false }, "-created_at");
+        console.log("Lists fetched:", result);
+        return result || [];
+      } catch (error) {
+        console.error("Error fetching lists:", error);
+        throw error;
+      }
     },
   });
 
@@ -52,18 +60,36 @@ export default function Sidebar({
       const colors = ["#FFD93D", "#8B5CF6", "#06B6D4", "#F59E0B", "#EF4444", "#10B981"];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
       
-      return await List.create({
+      console.log("Creating list with name:", name);
+      
+      const newList = await List.create({
         name,
         description: "",
         color: randomColor,
         archived: false,
         order: lists.length,
       });
+      
+      console.log("List created successfully:", newList);
+      return newList;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("List creation succeeded, invalidating queries...");
       queryClient.invalidateQueries({ queryKey: ["lists"] });
       setNewListName("");
       setIsAddingList(false);
+      toast({
+        title: "Success",
+        description: "List created successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error("Error creating list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create list. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -77,14 +103,31 @@ export default function Sidebar({
       if (selectedListId === lists.find(l => l.id === selectedListId)?.id) {
         onSelectList(null);
       }
+      toast({
+        title: "Success",
+        description: "List deleted successfully!",
+      });
+    },
+    onError: (error) => {
+      console.error("Error deleting list:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete list. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
   const handleCreateList = () => {
     if (newListName.trim()) {
+      console.log("Attempting to create list:", newListName);
       createListMutation.mutate(newListName);
     }
   };
+
+  if (listsError) {
+    console.error("Lists query error:", listsError);
+  }
 
   return (
     <div className="w-64 border-r bg-muted/30 flex flex-col h-full">
@@ -142,8 +185,12 @@ export default function Sidebar({
               autoFocus
               className="h-8"
             />
-            <Button size="sm" onClick={handleCreateList} disabled={!newListName.trim()}>
-              Add
+            <Button 
+              size="sm" 
+              onClick={handleCreateList} 
+              disabled={!newListName.trim() || createListMutation.isPending}
+            >
+              {createListMutation.isPending ? "..." : "Add"}
             </Button>
           </div>
         ) : (
@@ -160,6 +207,16 @@ export default function Sidebar({
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
+          {listsLoading && (
+            <div className="text-sm text-muted-foreground px-3 py-2">
+              Loading lists...
+            </div>
+          )}
+          {!listsLoading && lists.length === 0 && (
+            <div className="text-sm text-muted-foreground px-3 py-2">
+              No lists yet. Create one to get started!
+            </div>
+          )}
           {lists.map((list) => (
             <div
               key={list.id}
