@@ -1,0 +1,18 @@
+{
+  "name": "FilterPreset",
+  "description": "Saved filter configurations for quick access",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the filter preset"
+    },
+    "filters": {
+      "type": "object",
+      "description": "Filter configuration object"
+    },
+    "isDefault": {
+      "type": "boolean",
+      "description": "Whether this is the default filter"
+    }
+  }
+}

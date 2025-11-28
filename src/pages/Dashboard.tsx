@@ -27,6 +27,11 @@ export default function Dashboard() {
         priority: "all",
         status: "all",
         sortBy: "-created_at",
+        dateRange: undefined as string | undefined,
+        dateFrom: undefined as string | undefined,
+        dateTo: undefined as string | undefined,
+        tags: undefined as string[] | undefined,
+        lists: undefined as string[] | undefined,
     });
 
     const navigate = useNavigate();
@@ -58,6 +63,7 @@ export default function Dashboard() {
 
                 let filteredTasks = result || [];
 
+                // Search filter
                 if (searchQuery.trim()) {
                     const query = searchQuery.toLowerCase();
                     filteredTasks = filteredTasks.filter((task: any) =>
@@ -67,16 +73,68 @@ export default function Dashboard() {
                     );
                 }
 
+                // Priority filter
                 if (filters.priority !== "all") {
                     filteredTasks = filteredTasks.filter(
                         (task: any) => task.priority === filters.priority
                     );
                 }
 
+                // Status filter
                 if (filters.status !== "all") {
                     filteredTasks = filteredTasks.filter(
                         (task: any) => task.status === filters.status
                     );
+                }
+
+                // Date range filter
+                if (filters.dateRange) {
+                    const now = new Date();
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    
+                    filteredTasks = filteredTasks.filter((task: any) => {
+                        if (!task.dueDate) return false;
+                        const dueDate = new Date(task.dueDate);
+                        
+                        switch (filters.dateRange) {
+                            case "today":
+                                return dueDate.toDateString() === today.toDateString();
+                            case "week":
+                                const weekFromNow = new Date(today);
+                                weekFromNow.setDate(weekFromNow.getDate() + 7);
+                                return dueDate >= today && dueDate <= weekFromNow;
+                            case "month":
+                                const monthFromNow = new Date(today);
+                                monthFromNow.setMonth(monthFromNow.getMonth() + 1);
+                                return dueDate >= today && dueDate <= monthFromNow;
+                            case "overdue":
+                                return dueDate < today && !task.completed;
+                            case "custom":
+                                if (filters.dateFrom && filters.dateTo) {
+                                    const from = new Date(filters.dateFrom);
+                                    const to = new Date(filters.dateTo);
+                                    return dueDate >= from && dueDate <= to;
+                                }
+                                return true;
+                            default:
+                                return true;
+                        }
+                    });
+                }
+
+                // Tags filter
+                if (filters.tags && filters.tags.length > 0) {
+                    filteredTasks = filteredTasks.filter((task: any) => {
+                        if (!task.tags || task.tags.length === 0) return false;
+                        return filters.tags!.some(tag => task.tags.includes(tag));
+                    });
+                }
+
+                // Lists filter
+                if (filters.lists && filters.lists.length > 0) {
+                    filteredTasks = filteredTasks.filter((task: any) => {
+                        return filters.lists!.includes(task.listId);
+                    });
                 }
 
                 return filteredTasks;
@@ -122,6 +180,14 @@ export default function Dashboard() {
         if (!task.dueDate || task.completed) return false;
         return new Date(task.dueDate) < new Date();
     }).length;
+
+    // Extract all unique tags from tasks
+    const allTags = tasks.reduce((tags: string[], task: any) => {
+        if (task.tags && Array.isArray(task.tags)) {
+            return [...tags, ...task.tags];
+        }
+        return tags;
+    }, []);
 
     const handleNewTask = () => {
         setEditingTask(null);
@@ -191,6 +257,9 @@ export default function Dashboard() {
                                 <FilterBar 
                                     onFilterChange={handleFilterChange}
                                     onGroupByChange={setGroupBy}
+                                    activeFilters={filters}
+                                    tags={allTags}
+                                    lists={lists}
                                 />
                                 {tasksLoading ? (
                                     <div className="flex items-center justify-center py-16">
