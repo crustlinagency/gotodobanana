@@ -182,11 +182,10 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
                 </div>
             </div>
 
-            {/* Sticky horizontal scrollbar */}
+            {/* Fixed horizontal scrollbar at window bottom */}
             {scrollWidth > 0 && (
                 <div 
-                    className="sticky bottom-0 left-0 right-0 z-10 bg-background/95 backdrop-blur border-t"
-                    style={{ marginTop: "-1px" }}
+                    className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t"
                 >
                     <div 
                         ref={stickyScrollRef}
