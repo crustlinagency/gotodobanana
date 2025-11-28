@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { List } from "@/entities";
+import { Badge } from "@/components/ui/badge";
+import { List, Task } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Inbox, Trash2, BarChart3 } from "lucide-react";
 import { useState } from "react";
@@ -10,9 +11,16 @@ import { useNavigate } from "react-router-dom";
 interface SidebarProps {
   selectedListId: string | null;
   onSelectList: (listId: string | null) => void;
+  onSelectTrash?: () => void;
+  isTrashSelected?: boolean;
 }
 
-export default function Sidebar({ selectedListId, onSelectList }: SidebarProps) {
+export default function Sidebar({ 
+  selectedListId, 
+  onSelectList, 
+  onSelectTrash,
+  isTrashSelected = false 
+}: SidebarProps) {
   const [isAddingList, setIsAddingList] = useState(false);
   const [newListName, setNewListName] = useState("");
   const queryClient = useQueryClient();
@@ -23,6 +31,19 @@ export default function Sidebar({ selectedListId, onSelectList }: SidebarProps) 
     queryFn: async () => {
       const result = await List.filter({ archived: false }, "-created_at");
       return result || [];
+    },
+  });
+
+  const { data: deletedCount = 0 } = useQuery({
+    queryKey: ["deletedTasksCount"],
+    queryFn: async () => {
+      try {
+        const result = await Task.filter({ deleted: true });
+        return result?.length || 0;
+      } catch (error) {
+        console.error("Error fetching deleted tasks count:", error);
+        return 0;
+      }
     },
   });
 
@@ -72,12 +93,27 @@ export default function Sidebar({ selectedListId, onSelectList }: SidebarProps) 
         
         {/* All Tasks */}
         <Button
-          variant={selectedListId === null ? "secondary" : "ghost"}
+          variant={selectedListId === null && !isTrashSelected ? "secondary" : "ghost"}
           className="w-full justify-start mb-2"
           onClick={() => onSelectList(null)}
         >
           <Inbox className="h-4 w-4 mr-2" />
           All Tasks
+        </Button>
+
+        {/* Trash */}
+        <Button
+          variant={isTrashSelected ? "secondary" : "ghost"}
+          className="w-full justify-start mb-2"
+          onClick={onSelectTrash}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Trash
+          {deletedCount > 0 && (
+            <Badge variant="destructive" className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs">
+              {deletedCount}
+            </Badge>
+          )}
         </Button>
 
         {/* Analytics */}
@@ -128,7 +164,7 @@ export default function Sidebar({ selectedListId, onSelectList }: SidebarProps) 
             <div
               key={list.id}
               className={`group flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent cursor-pointer ${
-                selectedListId === list.id ? "bg-accent" : ""
+                selectedListId === list.id && !isTrashSelected ? "bg-accent" : ""
               }`}
             >
               <div

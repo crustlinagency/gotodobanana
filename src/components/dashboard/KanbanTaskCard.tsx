@@ -1,8 +1,14 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Tag } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, Tag, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { getTaskPreview } from "@/lib/html-utils";
+import { Task } from "@/entities";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 interface KanbanTaskCardProps {
     task: any;
@@ -10,6 +16,22 @@ interface KanbanTaskCardProps {
 }
 
 export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
+    const queryClient = useQueryClient();
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+    const softDeleteMutation = useMutation({
+        mutationFn: async () => {
+            await Task.update(task.id, {
+                deleted: true,
+                deletedAt: new Date().toISOString(),
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+            toast.success("Task moved to trash");
+        },
+    });
+
     const getPriorityClass = (priority: string) => {
         switch (priority) {
             case "High":
@@ -29,50 +51,81 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
         new Date(task.dueDate) < new Date();
 
     return (
-        <Card
-            className={`p-3 cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow ${getPriorityClass(
-                task.priority
-            )}`}
-            onClick={() => onClick(task)}
-            draggable
-        >
-            <h4 className="font-medium text-sm mb-2">{task.title}</h4>
-
-            {task.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                    {getTaskPreview(task.description, 80)}
-                </p>
-            )}
-
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-                {task.dueDate && (
-                    <Badge
-                        variant="outline"
-                        className={`text-xs ${
-                            isOverdue
-                                ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300"
-                                : ""
-                        }`}
+        <>
+            <Card
+                className={`p-3 group cursor-grab active:cursor-grabbing hover:shadow-lg transition-shadow ${getPriorityClass(
+                    task.priority
+                )}`}
+            >
+                <div className="flex items-start justify-between gap-2 mb-2">
+                    <h4 
+                        className="font-medium text-sm flex-1"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onClick(task);
+                        }}
                     >
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {format(new Date(task.dueDate), "MMM d")}
-                    </Badge>
+                        {task.title}
+                    </h4>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteDialog(true);
+                        }}
+                    >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                    </Button>
+                </div>
+
+                {task.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                        {getTaskPreview(task.description, 80)}
+                    </p>
                 )}
 
-                {task.tags && task.tags.length > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                        <Tag className="h-3 w-3 mr-1" />
-                        {task.tags[0]}
-                        {task.tags.length > 1 && ` +${task.tags.length - 1}`}
-                    </Badge>
-                )}
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {task.dueDate && (
+                        <Badge
+                            variant="outline"
+                            className={`text-xs ${
+                                isOverdue
+                                    ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300"
+                                    : ""
+                            }`}
+                        >
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {format(new Date(task.dueDate), "MMM d")}
+                        </Badge>
+                    )}
 
-                {task.priority && (
-                    <Badge variant="outline" className="text-xs">
-                        {task.priority}
-                    </Badge>
-                )}
-            </div>
-        </Card>
+                    {task.tags && task.tags.length > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                            <Tag className="h-3 w-3 mr-1" />
+                            {task.tags[0]}
+                            {task.tags.length > 1 && ` +${task.tags.length - 1}`}
+                        </Badge>
+                    )}
+
+                    {task.priority && (
+                        <Badge variant="outline" className="text-xs">
+                            {task.priority}
+                        </Badge>
+                    )}
+                </div>
+            </Card>
+
+            <DeleteConfirmDialog
+                open={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                onConfirm={() => {
+                    softDeleteMutation.mutate();
+                    setShowDeleteDialog(false);
+                }}
+                itemName={task.title}
+            />
+        </>
     );
 }

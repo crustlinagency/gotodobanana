@@ -16,6 +16,7 @@ import {
 import TaskDetailView from "./TaskDetailView";
 import CompletionCelebration from "./CompletionCelebration";
 import InlineTaskEdit from "./InlineTaskEdit";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { toast } from "sonner";
 
 interface TaskCardProps {
@@ -38,6 +39,7 @@ export default function TaskCard({
   const [isCompleting, setIsCompleting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isInlineEditing, setIsInlineEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const queryClient = useQueryClient();
 
   const toggleCompleteMutation = useMutation({
@@ -68,13 +70,16 @@ export default function TaskCard({
     },
   });
 
-  const deleteTaskMutation = useMutation({
+  const softDeleteMutation = useMutation({
     mutationFn: async () => {
-      await Task.delete(task.id);
+      await Task.update(task.id, {
+        deleted: true,
+        deletedAt: new Date().toISOString(),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      toast.success("Task deleted");
+      toast.success("Task moved to trash");
     },
   });
 
@@ -192,11 +197,7 @@ export default function TaskCard({
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => {
-                        if (confirm("Delete this task?")) {
-                          deleteTaskMutation.mutate();
-                        }
-                      }}
+                      onClick={() => setShowDeleteDialog(true)}
                       className="text-destructive"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -271,6 +272,16 @@ export default function TaskCard({
           setIsDetailOpen(false);
           onEdit(task);
         }}
+      />
+
+      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={() => {
+          softDeleteMutation.mutate();
+          setShowDeleteDialog(false);
+        }}
+        itemName={task.title}
       />
     </>
   );

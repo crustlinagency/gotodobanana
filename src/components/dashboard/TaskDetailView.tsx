@@ -4,12 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Task } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Clock, Flag, X, CheckCircle2, Circle } from "lucide-react";
+import { Calendar, Clock, Flag, CheckCircle2, Circle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { useState } from "react";
 import TaskComments from "./TaskComments";
 import TaskAttachments from "./TaskAttachments";
 import TaskSubtasks from "./TaskSubtasks";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { toast } from "sonner";
 
 interface TaskDetailViewProps {
@@ -21,6 +23,7 @@ interface TaskDetailViewProps {
 
 export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDetailViewProps) {
     const queryClient = useQueryClient();
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
     const toggleCompleteMutation = useMutation({
         mutationFn: async () => {
@@ -33,6 +36,20 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
             toast.success(task.completed ? "Task reopened" : "Task completed! 🎉");
+        },
+    });
+
+    const softDeleteMutation = useMutation({
+        mutationFn: async () => {
+            await Task.update(task.id, {
+                deleted: true,
+                deletedAt: new Date().toISOString(),
+            });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["tasks"] });
+            toast.success("Task moved to trash");
+            onClose();
         },
     });
 
@@ -63,119 +80,139 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
     const isOverdue = task.dueDate && !task.completed && new Date(task.dueDate) < new Date();
 
     return (
-        <Dialog open={open} onOpenChange={onClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader className="space-y-4">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-3">
-                            <DialogTitle className="text-2xl pr-8">{task.title}</DialogTitle>
-                            
-                            <div className="flex flex-wrap items-center gap-2">
-                                {task.priority && (
-                                    <Badge variant="outline" className={getPriorityColor(task.priority)}>
-                                        <Flag className="h-3 w-3 mr-1" />
-                                        {task.priority}
-                                    </Badge>
-                                )}
+        <>
+            <Dialog open={open} onOpenChange={onClose}>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader className="space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-3">
+                                <DialogTitle className="text-2xl pr-8">{task.title}</DialogTitle>
                                 
-                                {task.status && (
-                                    <Badge className={getStatusColor(task.status)}>
-                                        {task.status === "completed" ? (
-                                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                                        ) : (
-                                            <Circle className="h-3 w-3 mr-1" />
-                                        )}
-                                        {task.status.replace("-", " ").toUpperCase()}
-                                    </Badge>
-                                )}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {task.priority && (
+                                        <Badge variant="outline" className={getPriorityColor(task.priority)}>
+                                            <Flag className="h-3 w-3 mr-1" />
+                                            {task.priority}
+                                        </Badge>
+                                    )}
+                                    
+                                    {task.status && (
+                                        <Badge className={getStatusColor(task.status)}>
+                                            {task.status === "completed" ? (
+                                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                            ) : (
+                                                <Circle className="h-3 w-3 mr-1" />
+                                            )}
+                                            {task.status.replace("-", " ").toUpperCase()}
+                                        </Badge>
+                                    )}
 
-                                {task.tags && task.tags.length > 0 && (
-                                    <>
-                                        {task.tags.map((tag: string, index: number) => (
-                                            <Badge key={index} variant="secondary">
-                                                {tag}
-                                            </Badge>
-                                        ))}
-                                    </>
-                                )}
-                            </div>
+                                    {task.tags && task.tags.length > 0 && (
+                                        <>
+                                            {task.tags.map((tag: string, index: number) => (
+                                                <Badge key={index} variant="secondary">
+                                                    {tag}
+                                                </Badge>
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
 
-                            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                                {task.dueDate && (
-                                    <div className="flex items-center gap-1">
-                                        <Calendar className="h-4 w-4" />
-                                        <span className={isOverdue ? "text-red-600 font-medium" : ""}>
-                                            Due {format(new Date(task.dueDate), "MMM d, yyyy")}
-                                            {isOverdue && " (Overdue)"}
-                                        </span>
-                                    </div>
-                                )}
-                                {task.created_at && (
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="h-4 w-4" />
-                                        <span>Created {format(new Date(task.created_at), "MMM d, yyyy")}</span>
-                                    </div>
-                                )}
+                                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                    {task.dueDate && (
+                                        <div className="flex items-center gap-1">
+                                            <Calendar className="h-4 w-4" />
+                                            <span className={isOverdue ? "text-red-600 font-medium" : ""}>
+                                                Due {format(new Date(task.dueDate), "MMM d, yyyy")}
+                                                {isOverdue && " (Overdue)"}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {task.created_at && (
+                                        <div className="flex items-center gap-1">
+                                            <Clock className="h-4 w-4" />
+                                            <span>Created {format(new Date(task.created_at), "MMM d, yyyy")}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="flex gap-2">
-                        <Button
-                            onClick={() => toggleCompleteMutation.mutate()}
-                            variant={task.completed ? "outline" : "default"}
-                            className={!task.completed ? "bg-banana-500 hover:bg-banana-600 text-black" : ""}
-                        >
-                            {task.completed ? (
-                                <>
-                                    <Circle className="h-4 w-4 mr-2" />
-                                    Reopen Task
-                                </>
-                            ) : (
-                                <>
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Mark Complete
-                                </>
-                            )}
-                        </Button>
-                        <Button onClick={onEdit} variant="outline">
-                            Edit Task
-                        </Button>
-                    </div>
-                </DialogHeader>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => toggleCompleteMutation.mutate()}
+                                variant={task.completed ? "outline" : "default"}
+                                className={!task.completed ? "bg-banana-500 hover:bg-banana-600 text-black" : ""}
+                            >
+                                {task.completed ? (
+                                    <>
+                                        <Circle className="h-4 w-4 mr-2" />
+                                        Reopen Task
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                                        Mark Complete
+                                    </>
+                                )}
+                            </Button>
+                            <Button onClick={onEdit} variant="outline">
+                                Edit Task
+                            </Button>
+                            <Button 
+                                onClick={() => setShowDeleteDialog(true)} 
+                                variant="outline"
+                                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                            </Button>
+                        </div>
+                    </DialogHeader>
 
-                <Separator />
+                    <Separator />
 
-                {task.description && (
-                    <div className="space-y-2">
-                        <h3 className="font-semibold">Description</h3>
-                        <div
-                            className="prose prose-sm max-w-none text-muted-foreground"
-                            dangerouslySetInnerHTML={{ __html: task.description }}
-                        />
-                    </div>
-                )}
+                    {task.description && (
+                        <div className="space-y-2">
+                            <h3 className="font-semibold">Description</h3>
+                            <div
+                                className="prose prose-sm max-w-none text-muted-foreground"
+                                dangerouslySetInnerHTML={{ __html: task.description }}
+                            />
+                        </div>
+                    )}
 
-                <Tabs defaultValue="subtasks" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
-                        <TabsTrigger value="attachments">Attachments</TabsTrigger>
-                        <TabsTrigger value="comments">Comments</TabsTrigger>
-                    </TabsList>
+                    <Tabs defaultValue="subtasks" className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="subtasks">Subtasks</TabsTrigger>
+                            <TabsTrigger value="attachments">Attachments</TabsTrigger>
+                            <TabsTrigger value="comments">Comments</TabsTrigger>
+                        </TabsList>
 
-                    <TabsContent value="subtasks" className="mt-4">
-                        <TaskSubtasks taskId={task.id} />
-                    </TabsContent>
+                        <TabsContent value="subtasks" className="mt-4">
+                            <TaskSubtasks taskId={task.id} />
+                        </TabsContent>
 
-                    <TabsContent value="attachments" className="mt-4">
-                        <TaskAttachments taskId={task.id} />
-                    </TabsContent>
+                        <TabsContent value="attachments" className="mt-4">
+                            <TaskAttachments taskId={task.id} />
+                        </TabsContent>
 
-                    <TabsContent value="comments" className="mt-4">
-                        <TaskComments taskId={task.id} />
-                    </TabsContent>
-                </Tabs>
-            </DialogContent>
-        </Dialog>
+                        <TabsContent value="comments" className="mt-4">
+                            <TaskComments taskId={task.id} />
+                        </TabsContent>
+                    </Tabs>
+                </DialogContent>
+            </Dialog>
+
+            <DeleteConfirmDialog
+                open={showDeleteDialog}
+                onClose={() => setShowDeleteDialog(false)}
+                onConfirm={() => {
+                    softDeleteMutation.mutate();
+                    setShowDeleteDialog(false);
+                }}
+                itemName={task.title}
+            />
+        </>
     );
 }

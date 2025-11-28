@@ -12,7 +12,7 @@ interface KanbanViewProps {
 
 export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewProps) {
     const queryClient = useQueryClient();
-    const draggedTaskIdRef = useRef<string | null>(null);
+    const draggedTaskRef = useRef<any>(null);
     const contentScrollRef = useRef<HTMLDivElement>(null);
     const stickyScrollRef = useRef<HTMLDivElement>(null);
     const [scrollWidth, setScrollWidth] = useState(0);
@@ -42,7 +42,6 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
 
         if (!contentScroll || !stickyScroll) return;
 
-        // Update sticky scrollbar width to match content
         const updateScrollWidth = () => {
             const scrollWidth = contentScroll.scrollWidth - contentScroll.clientWidth;
             setScrollWidth(scrollWidth);
@@ -51,14 +50,12 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
         updateScrollWidth();
         window.addEventListener("resize", updateScrollWidth);
 
-        // Sync sticky scrollbar when content is scrolled
         const handleContentScroll = () => {
             if (stickyScroll) {
                 stickyScroll.scrollLeft = contentScroll.scrollLeft;
             }
         };
 
-        // Sync content when sticky scrollbar is scrolled
         const handleStickyScroll = () => {
             if (contentScroll) {
                 contentScroll.scrollLeft = stickyScroll.scrollLeft;
@@ -75,40 +72,30 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
         };
     }, []);
 
-    useEffect(() => {
-        const handleDragStart = (e: DragEvent) => {
-            const target = e.target as HTMLElement;
-            const taskCard = target.closest("[data-task-id]") as HTMLElement;
-            
-            if (taskCard) {
-                const taskId = taskCard.getAttribute("data-task-id");
-                if (taskId) {
-                    draggedTaskIdRef.current = taskId;
-                    e.dataTransfer!.effectAllowed = "move";
-                    e.dataTransfer!.setData("text/html", taskId);
-                    taskCard.style.opacity = "0.5";
-                }
-            }
-        };
+    const handleDragStart = (task: any) => {
+        draggedTaskRef.current = task;
+    };
 
-        const handleDragEnd = (e: DragEvent) => {
-            const target = e.target as HTMLElement;
-            const taskCard = target.closest("[data-task-id]") as HTMLElement;
-            
-            if (taskCard) {
-                taskCard.style.opacity = "1";
-            }
-            draggedTaskIdRef.current = null;
-        };
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+    };
 
-        document.addEventListener("dragstart", handleDragStart);
-        document.addEventListener("dragend", handleDragEnd);
+    const handleDrop = (e: React.DragEvent, targetStatus: string) => {
+        e.preventDefault();
+        
+        const task = draggedTaskRef.current;
+        if (!task) return;
 
-        return () => {
-            document.removeEventListener("dragstart", handleDragStart);
-            document.removeEventListener("dragend", handleDragEnd);
-        };
-    }, []);
+        if (task.status !== targetStatus) {
+            updateTaskMutation.mutate({
+                taskId: task.id,
+                status: targetStatus,
+            });
+        }
+        
+        draggedTaskRef.current = null;
+    };
 
     const columns = [
         {
@@ -131,31 +118,8 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
         },
     ];
 
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-    };
-
-    const handleDrop = (e: React.DragEvent, targetStatus: string) => {
-        e.preventDefault();
-        
-        const taskId = draggedTaskIdRef.current;
-        if (!taskId) return;
-
-        const task = tasks.find((t) => t.id === taskId);
-        if (!task) return;
-
-        if (task.status !== targetStatus) {
-            updateTaskMutation.mutate({
-                taskId: taskId,
-                status: targetStatus,
-            });
-        }
-    };
-
     return (
         <div className="relative">
-            {/* Main content with horizontal scroll */}
             <div 
                 ref={contentScrollRef}
                 className="overflow-x-auto pb-4"
@@ -176,17 +140,15 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
                                 onEditTask={onEditTask}
                                 onNewTask={onNewTask}
                                 color={column.color}
+                                onDragStart={handleDragStart}
                             />
                         </div>
                     ))}
                 </div>
             </div>
 
-            {/* Fixed horizontal scrollbar at window bottom */}
             {scrollWidth > 0 && (
-                <div 
-                    className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t"
-                >
+                <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t">
                     <div 
                         ref={stickyScrollRef}
                         className="overflow-x-auto py-2"
@@ -195,7 +157,6 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
                             overflowY: "hidden"
                         }}
                     >
-                        {/* Invisible spacer to create scrollbar */}
                         <div 
                             style={{ 
                                 width: `${scrollWidth + (contentScrollRef.current?.clientWidth || 0)}px`,

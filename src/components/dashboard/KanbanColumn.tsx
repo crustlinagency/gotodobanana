@@ -10,6 +10,7 @@ interface KanbanColumnProps {
     onEditTask: (task: any) => void;
     onNewTask: () => void;
     color: string;
+    onDragStart: (task: any) => void;
 }
 
 export default function KanbanColumn({
@@ -19,6 +20,7 @@ export default function KanbanColumn({
     onEditTask,
     onNewTask,
     color,
+    onDragStart,
 }: KanbanColumnProps) {
     return (
         <div className="flex-1 min-w-[300px]">
@@ -45,8 +47,15 @@ export default function KanbanColumn({
                         </div>
                     ) : (
                         tasks.map((task) => (
-                            <div key={task.id} data-task-id={task.id}>
-                                <KanbanTaskCard task={task} onClick={onEditTask} />
+                            <div
+                                key={task.id}
+                                draggable
+                                onDragStart={() => onDragStart(task)}
+                            >
+                                <KanbanTaskCard 
+                                    task={task} 
+                                    onClick={onEditTask}
+                                />
                             </div>
                         ))
                     )}

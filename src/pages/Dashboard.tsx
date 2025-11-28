@@ -17,6 +17,7 @@ import RecentActivityFeed from "@/components/dashboard/RecentActivityFeed";
 import DailyOverview from "@/components/dashboard/DailyOverview";
 import WeeklyProductivity from "@/components/dashboard/WeeklyProductivity";
 import FocusMode from "@/components/dashboard/FocusMode";
+import TrashView from "@/components/dashboard/TrashView";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Keyboard } from "lucide-react";
 import { toast } from "sonner";
@@ -29,6 +30,7 @@ import {
 
 export default function Dashboard() {
     const [selectedListId, setSelectedListId] = useState<string | null>(null);
+    const [isTrashSelected, setIsTrashSelected] = useState(false);
     const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
     const [editingTask, setEditingTask] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState("");
@@ -68,9 +70,12 @@ export default function Dashboard() {
                 let result;
                 
                 if (selectedListId) {
-                    result = await Task.filter({ listId: selectedListId }, filters.sortBy);
+                    result = await Task.filter({ 
+                        listId: selectedListId,
+                        deleted: false 
+                    }, filters.sortBy);
                 } else {
-                    result = await Task.list(filters.sortBy);
+                    result = await Task.filter({ deleted: false }, filters.sortBy);
                 }
 
                 let filteredTasks = result || [];
@@ -155,7 +160,7 @@ export default function Dashboard() {
                 return [];
             }
         },
-        enabled: !!user,
+        enabled: !!user && !isTrashSelected,
     });
 
     // Focus mode: filter to high priority and not completed
@@ -247,6 +252,16 @@ export default function Dashboard() {
         setIsFocusMode(prev => !prev);
     };
 
+    const handleSelectList = (listId: string | null) => {
+        setSelectedListId(listId);
+        setIsTrashSelected(false);
+    };
+
+    const handleSelectTrash = () => {
+        setIsTrashSelected(true);
+        setSelectedListId(null);
+    };
+
     return (
         <div className="h-screen flex flex-col overflow-hidden">
             <DashboardHeader 
@@ -258,129 +273,137 @@ export default function Dashboard() {
             <div className="flex-1 flex overflow-hidden">
                 <Sidebar
                     selectedListId={selectedListId}
-                    onSelectList={setSelectedListId}
+                    onSelectList={handleSelectList}
+                    onSelectTrash={handleSelectTrash}
+                    isTrashSelected={isTrashSelected}
                 />
 
                 <main className="flex-1 overflow-auto">
                     <div className="p-6">
-                        <div className="mb-6">
-                            <div className="flex items-center justify-between mb-2">
-                                <h1 className="text-3xl font-bold">
-                                    {selectedListId ? "List Tasks" : "All Tasks"}
-                                </h1>
-                                <div className="flex items-center gap-2">
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button variant="outline" size="icon">
-                                                <Keyboard className="h-4 w-4" />
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="max-w-xs">
-                                            <div className="space-y-2">
-                                                <p className="font-semibold">Keyboard Shortcuts</p>
-                                                <div className="space-y-1 text-xs">
-                                                    <div>Ctrl+N - Create task</div>
-                                                    <div>Ctrl+K - Search</div>
-                                                    <div>Ctrl+F - Focus Mode</div>
-                                                </div>
+                        {isTrashSelected ? (
+                            <TrashView />
+                        ) : (
+                            <>
+                                <div className="mb-6">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h1 className="text-3xl font-bold">
+                                            {selectedListId ? "List Tasks" : "All Tasks"}
+                                        </h1>
+                                        <div className="flex items-center gap-2">
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="outline" size="icon">
+                                                        <Keyboard className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="max-w-xs">
+                                                    <div className="space-y-2">
+                                                        <p className="font-semibold">Keyboard Shortcuts</p>
+                                                        <div className="space-y-1 text-xs">
+                                                            <div>Ctrl+N - Create task</div>
+                                                            <div>Ctrl+K - Search</div>
+                                                            <div>Ctrl+F - Focus Mode</div>
+                                                        </div>
+                                                    </div>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                            <ViewSwitcher
+                                                currentView={currentView}
+                                                onViewChange={setCurrentView}
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="text-muted-foreground">
+                                        Organize, prioritize, and accomplish your goals
+                                    </p>
+                                </div>
+
+                                {/* Focus Mode Toggle - Show only in list view */}
+                                {currentView === "list" && (
+                                    <div className="mb-6">
+                                        <FocusMode
+                                            isActive={isFocusMode}
+                                            onToggle={handleToggleFocusMode}
+                                            filteredTasksCount={displayTasks.length}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Productivity Widgets - Only show in list view */}
+                                {currentView === "list" && (
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                                        <div className="lg:col-span-2 space-y-6">
+                                            <StatsWidget
+                                                totalTasks={tasks.length}
+                                                completedTasks={completedTasks}
+                                                overdueTasks={overdueTasks}
+                                                todayTasks={todayTasks}
+                                            />
+                                            <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
+                                        </div>
+                                        <div className="space-y-6">
+                                            <WeeklyProductivity tasks={tasks} />
+                                            <RecentActivityFeed tasks={tasks} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {currentView === "list" && (
+                                    <>
+                                        <FilterBar 
+                                            onFilterChange={handleFilterChange}
+                                            onGroupByChange={setGroupBy}
+                                            activeFilters={filters}
+                                            tags={allTags}
+                                            lists={lists}
+                                        />
+                                        {tasksLoading ? (
+                                            <div className="flex items-center justify-center py-16">
+                                                <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
                                             </div>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                    <ViewSwitcher
-                                        currentView={currentView}
-                                        onViewChange={setCurrentView}
-                                    />
-                                </div>
-                            </div>
-                            <p className="text-muted-foreground">
-                                Organize, prioritize, and accomplish your goals
-                            </p>
-                        </div>
-
-                        {/* Focus Mode Toggle - Show only in list view */}
-                        {currentView === "list" && (
-                            <div className="mb-6">
-                                <FocusMode
-                                    isActive={isFocusMode}
-                                    onToggle={handleToggleFocusMode}
-                                    filteredTasksCount={displayTasks.length}
-                                />
-                            </div>
-                        )}
-
-                        {/* Productivity Widgets - Only show in list view */}
-                        {currentView === "list" && (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                                <div className="lg:col-span-2 space-y-6">
-                                    <StatsWidget
-                                        totalTasks={tasks.length}
-                                        completedTasks={completedTasks}
-                                        overdueTasks={overdueTasks}
-                                        todayTasks={todayTasks}
-                                    />
-                                    <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
-                                </div>
-                                <div className="space-y-6">
-                                    <WeeklyProductivity tasks={tasks} />
-                                    <RecentActivityFeed tasks={tasks} />
-                                </div>
-                            </div>
-                        )}
-
-                        {currentView === "list" && (
-                            <>
-                                <FilterBar 
-                                    onFilterChange={handleFilterChange}
-                                    onGroupByChange={setGroupBy}
-                                    activeFilters={filters}
-                                    tags={allTags}
-                                    lists={lists}
-                                />
-                                {tasksLoading ? (
-                                    <div className="flex items-center justify-center py-16">
-                                        <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
-                                    </div>
-                                ) : groupBy !== "none" ? (
-                                    <TaskGroupView
-                                        tasks={displayTasks}
-                                        groupBy={groupBy}
-                                        onEditTask={handleEditTask}
-                                        lists={lists}
-                                    />
-                                ) : (
-                                    <TaskList tasks={displayTasks} onEditTask={handleEditTask} />
+                                        ) : groupBy !== "none" ? (
+                                            <TaskGroupView
+                                                tasks={displayTasks}
+                                                groupBy={groupBy}
+                                                onEditTask={handleEditTask}
+                                                lists={lists}
+                                            />
+                                        ) : (
+                                            <TaskList tasks={displayTasks} onEditTask={handleEditTask} />
+                                        )}
+                                    </>
                                 )}
-                            </>
-                        )}
 
-                        {currentView === "calendar" && (
-                            <>
-                                {tasksLoading ? (
-                                    <div className="flex items-center justify-center py-16">
-                                        <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
-                                    </div>
-                                ) : (
-                                    <CalendarView
-                                        tasks={displayTasks}
-                                        onEditTask={handleEditTask}
-                                        onNewTask={handleNewTask}
-                                    />
+                                {currentView === "calendar" && (
+                                    <>
+                                        {tasksLoading ? (
+                                            <div className="flex items-center justify-center py-16">
+                                                <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
+                                            </div>
+                                        ) : (
+                                            <CalendarView
+                                                tasks={displayTasks}
+                                                onEditTask={handleEditTask}
+                                                onNewTask={handleNewTask}
+                                            />
+                                        )}
+                                    </>
                                 )}
-                            </>
-                        )}
 
-                        {currentView === "kanban" && (
-                            <>
-                                {tasksLoading ? (
-                                    <div className="flex items-center justify-center py-16">
-                                        <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
-                                    </div>
-                                ) : (
-                                    <KanbanView
-                                        tasks={displayTasks}
-                                        onEditTask={handleEditTask}
-                                        onNewTask={handleNewTask}
-                                    />
+                                {currentView === "kanban" && (
+                                    <>
+                                        {tasksLoading ? (
+                                            <div className="flex items-center justify-center py-16">
+                                                <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
+                                            </div>
+                                        ) : (
+                                            <KanbanView
+                                                tasks={displayTasks}
+                                                onEditTask={handleEditTask}
+                                                onNewTask={handleNewTask}
+                                            />
+                                        )}
+                                    </>
                                 )}
                             </>
                         )}

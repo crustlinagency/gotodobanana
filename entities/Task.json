@@ -48,6 +48,14 @@
     "order": {
       "type": "number",
       "description": "Order position for drag-and-drop sorting"
+    },
+    "deleted": {
+      "type": "boolean",
+      "description": "Soft delete flag - task is in trash"
+    },
+    "deletedAt": {
+      "type": "string",
+      "description": "Timestamp when task was moved to trash"
     }
   }
 }
