@@ -54,8 +54,8 @@ export default function DashboardHeader({ onNewTask, onSearch, onNotificationTas
                 {/* Logo */}
                 <Link to="/" className="flex items-center gap-2 mr-4">
                     <img
-                        src="https://ellprnxjjzatijdxcogk.supabase.co/storage/v1/object/public/files/chat-generated-images/project-x3quk5sxm0hbi1h6kufdz/4ae5aec1-5b38-4961-b3a1-aa6e5f0f3649.png"
-                        alt="GoTodoBanana logo - banana icon"
+                        src="https://ellprnxjjzatijdxcogk.supabase.co/storage/v1/object/public/superdev-project-images/dbdbba43-10e8-476a-8d86-f732d63edeed/x3quk5sxm0hbi1h6kufdz/1764371182720-gotodobanana-trsp.png"
+                        alt="GoTodoBanana logo - banana checkmark"
                         className="h-8 w-8"
                     />
                     <span className="hidden md:block text-lg font-bold bg-gradient-to-r from-banana-600 to-grape-600 bg-clip-text text-transparent">
