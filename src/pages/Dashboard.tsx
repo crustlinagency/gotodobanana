@@ -297,31 +297,35 @@ export default function Dashboard() {
                             </p>
                         </div>
 
-                        {/* Focus Mode Toggle */}
-                        <div className="mb-6">
-                            <FocusMode
-                                isActive={isFocusMode}
-                                onToggle={handleToggleFocusMode}
-                                filteredTasksCount={displayTasks.length}
-                            />
-                        </div>
-
-                        {/* Productivity Widgets */}
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                            <div className="lg:col-span-2 space-y-6">
-                                <StatsWidget
-                                    totalTasks={tasks.length}
-                                    completedTasks={completedTasks}
-                                    overdueTasks={overdueTasks}
-                                    todayTasks={todayTasks}
+                        {/* Focus Mode Toggle - Show only in list view */}
+                        {currentView === "list" && (
+                            <div className="mb-6">
+                                <FocusMode
+                                    isActive={isFocusMode}
+                                    onToggle={handleToggleFocusMode}
+                                    filteredTasksCount={displayTasks.length}
                                 />
-                                <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
                             </div>
-                            <div className="space-y-6">
-                                <WeeklyProductivity tasks={tasks} />
-                                <RecentActivityFeed tasks={tasks} />
+                        )}
+
+                        {/* Productivity Widgets - Only show in list view */}
+                        {currentView === "list" && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                                <div className="lg:col-span-2 space-y-6">
+                                    <StatsWidget
+                                        totalTasks={tasks.length}
+                                        completedTasks={completedTasks}
+                                        overdueTasks={overdueTasks}
+                                        todayTasks={todayTasks}
+                                    />
+                                    <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
+                                </div>
+                                <div className="space-y-6">
+                                    <WeeklyProductivity tasks={tasks} />
+                                    <RecentActivityFeed tasks={tasks} />
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {currentView === "list" && (
                             <>
