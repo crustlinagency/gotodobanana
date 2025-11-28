@@ -16,7 +16,7 @@ import FocusMode from "@/components/dashboard/FocusMode";
 import TrashView from "@/components/dashboard/TrashView";
 import WidgetsSidebar from "@/components/dashboard/WidgetsSidebar";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Keyboard } from "lucide-react";
+import { Loader2, Keyboard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,14 @@ export default function Dashboard() {
     const [currentView, setCurrentView] = useState<"list" | "calendar" | "kanban">("list");
     const [groupBy, setGroupBy] = useState<"none" | "list" | "priority" | "dueDate" | "status">("none");
     const [isFocusMode, setIsFocusMode] = useState(false);
+    const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(() => {
+        const saved = localStorage.getItem("leftSidebarOpen");
+        return saved !== null ? JSON.parse(saved) : true;
+    });
+    const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(() => {
+        const saved = localStorage.getItem("rightSidebarOpen");
+        return saved !== null ? JSON.parse(saved) : true;
+    });
     const [filters, setFilters] = useState({
         priority: "all",
         status: "all",
@@ -47,6 +55,14 @@ export default function Dashboard() {
 
     const navigate = useNavigate();
     const { data: lists = [] } = useLists();
+
+    useEffect(() => {
+        localStorage.setItem("leftSidebarOpen", JSON.stringify(isLeftSidebarOpen));
+    }, [isLeftSidebarOpen]);
+
+    useEffect(() => {
+        localStorage.setItem("rightSidebarOpen", JSON.stringify(isRightSidebarOpen));
+    }, [isRightSidebarOpen]);
 
     const { data: user, isLoading: userLoading } = useQuery({
         queryKey: ["user"],
@@ -262,13 +278,45 @@ export default function Dashboard() {
                 onNotificationTaskClick={handleNotificationTaskClick}
             />
 
-            <div className="flex-1 flex overflow-hidden">
-                <Sidebar
-                    selectedListId={selectedListId}
-                    onSelectList={handleSelectList}
-                    onSelectTrash={handleSelectTrash}
-                    isTrashSelected={isTrashSelected}
-                />
+            <div className="flex-1 flex overflow-hidden relative">
+                {/* Left Sidebar */}
+                <div 
+                    className={`border-r bg-muted/30 flex flex-col h-full transition-all duration-300 ease-in-out ${
+                        isLeftSidebarOpen ? "w-64" : "w-0"
+                    }`}
+                    style={{ overflow: isLeftSidebarOpen ? "visible" : "hidden" }}
+                >
+                    {isLeftSidebarOpen && (
+                        <Sidebar
+                            selectedListId={selectedListId}
+                            onSelectList={handleSelectList}
+                            onSelectTrash={handleSelectTrash}
+                            isTrashSelected={isTrashSelected}
+                        />
+                    )}
+                </div>
+
+                {/* Left Sidebar Toggle Button */}
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute left-0 top-4 z-10 h-8 w-8 rounded-r-md rounded-l-none border-r border-t border-b bg-background shadow-sm hover:bg-accent"
+                            style={{ left: isLeftSidebarOpen ? "256px" : "0" }}
+                            onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
+                        >
+                            {isLeftSidebarOpen ? (
+                                <PanelLeftClose className="h-4 w-4" />
+                            ) : (
+                                <PanelLeftOpen className="h-4 w-4" />
+                            )}
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                        {isLeftSidebarOpen ? "Hide Lists" : "Show Lists"}
+                    </TooltipContent>
+                </Tooltip>
 
                 <main className="flex-1 overflow-auto">
                     {isTrashSelected ? (
@@ -383,16 +431,48 @@ export default function Dashboard() {
                                 )}
                             </div>
 
+                            {/* Right Sidebar */}
                             {currentView === "list" && (
-                                <div className="w-80 border-l bg-muted/30 p-4 overflow-auto">
-                                    <WidgetsSidebar
-                                        totalTasks={tasks.length}
-                                        completedTasks={completedTasks}
-                                        overdueTasks={overdueTasks}
-                                        todayTasks={todayTasks}
-                                        tasks={tasks}
-                                    />
+                                <div 
+                                    className={`border-l bg-muted/30 p-4 overflow-auto transition-all duration-300 ease-in-out ${
+                                        isRightSidebarOpen ? "w-80" : "w-0"
+                                    }`}
+                                    style={{ overflow: isRightSidebarOpen ? "auto" : "hidden" }}
+                                >
+                                    {isRightSidebarOpen && (
+                                        <WidgetsSidebar
+                                            totalTasks={tasks.length}
+                                            completedTasks={completedTasks}
+                                            overdueTasks={overdueTasks}
+                                            todayTasks={todayTasks}
+                                            tasks={tasks}
+                                        />
+                                    )}
                                 </div>
+                            )}
+
+                            {/* Right Sidebar Toggle Button */}
+                            {currentView === "list" && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute right-0 top-4 z-10 h-8 w-8 rounded-l-md rounded-r-none border-l border-t border-b bg-background shadow-sm hover:bg-accent"
+                                            style={{ right: isRightSidebarOpen ? "320px" : "0" }}
+                                            onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+                                        >
+                                            {isRightSidebarOpen ? (
+                                                <PanelRightClose className="h-4 w-4" />
+                                            ) : (
+                                                <PanelRightOpen className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left">
+                                        {isRightSidebarOpen ? "Hide Widgets" : "Show Widgets"}
+                                    </TooltipContent>
+                                </Tooltip>
                             )}
                         </div>
                     )}
