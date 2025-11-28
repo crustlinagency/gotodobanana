@@ -117,7 +117,7 @@ export default function CalendarView({ tasks, onEditTask, onNewTask }: CalendarV
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-6 w-6 opacity-0 hover:opacity-100 transition-opacity"
+                                            className="h-6 w-6 opacity-50 hover:opacity-100 hover:bg-banana-100 dark:hover:bg-banana-950/50 transition-all"
                                             onClick={onNewTask}
                                         >
                                             <Plus className="h-3 w-3" />
