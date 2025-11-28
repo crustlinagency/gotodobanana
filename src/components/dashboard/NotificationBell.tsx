@@ -19,7 +19,7 @@ export default function NotificationBell({ onTaskClick }: NotificationBellProps)
         queryKey: ["tasks"],
         queryFn: async () => {
             try {
-                const result = await Task.list("-created_at");
+                const result = await Task.filter({ deleted: false }, "-created_at");
                 return result || [];
             } catch (error) {
                 console.error("Error fetching tasks:", error);
@@ -28,9 +28,9 @@ export default function NotificationBell({ onTaskClick }: NotificationBellProps)
         },
     });
 
-    // Filter for upcoming and overdue tasks
+    // Filter for upcoming and overdue tasks (excluding deleted ones)
     const upcomingTasks = tasks.filter((task: any) => {
-        if (!task.dueDate || task.completed) return false;
+        if (!task.dueDate || task.completed || task.deleted) return false;
         const dueDate = new Date(task.dueDate);
         return isToday(dueDate) || isTomorrow(dueDate) || isPast(dueDate);
     });

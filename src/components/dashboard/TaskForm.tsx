@@ -83,6 +83,10 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       toast.success("Task created");
       handleClose();
     },
+    onError: (error: any) => {
+      console.error("Error creating task:", error);
+      toast.error("Failed to create task");
+    },
   });
 
   const updateTaskMutation = useMutation({
@@ -94,10 +98,18 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       toast.success("Task updated");
       handleClose();
     },
+    onError: (error: any) => {
+      console.error("Error updating task:", error);
+      toast.error("Failed to update task. It may have been deleted.");
+      handleClose();
+    },
   });
 
   const softDeleteMutation = useMutation({
     mutationFn: async () => {
+      if (!task?.id) {
+        throw new Error("Task not found");
+      }
       await Task.update(task.id, {
         deleted: true,
         deletedAt: new Date().toISOString(),
@@ -106,6 +118,13 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Task moved to trash");
+      setShowDeleteDialog(false);
+      handleClose();
+    },
+    onError: (error: any) => {
+      console.error("Error deleting task:", error);
+      toast.error("Failed to delete task. It may have already been removed.");
+      setShowDeleteDialog(false);
       handleClose();
     },
   });
@@ -140,6 +159,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     setDueDate(undefined);
     setListId(defaultListId || "none");
     setTags("");
+    setShowDeleteDialog(false);
     onClose();
   };
 
@@ -167,7 +187,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="comments" disabled={!task}>
-                Comments {task && `(${0})`}
+                Comments
               </TabsTrigger>
             </TabsList>
 
@@ -306,7 +326,6 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={() => {
           softDeleteMutation.mutate();
-          setShowDeleteDialog(false);
         }}
         itemName={task?.title}
       />

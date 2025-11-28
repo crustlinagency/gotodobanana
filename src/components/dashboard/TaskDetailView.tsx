@@ -27,6 +27,9 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
 
     const toggleCompleteMutation = useMutation({
         mutationFn: async () => {
+            if (!task?.id) {
+                throw new Error("Task not found");
+            }
             await Task.update(task.id, {
                 completed: !task.completed,
                 completedAt: !task.completed ? new Date().toISOString() : null,
@@ -37,10 +40,18 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
             toast.success(task.completed ? "Task reopened" : "Task completed! 🎉");
         },
+        onError: (error: any) => {
+            console.error("Error toggling task:", error);
+            toast.error("Failed to update task. It may have been deleted.");
+            onClose();
+        },
     });
 
     const softDeleteMutation = useMutation({
         mutationFn: async () => {
+            if (!task?.id) {
+                throw new Error("Task not found");
+            }
             await Task.update(task.id, {
                 deleted: true,
                 deletedAt: new Date().toISOString(),
@@ -49,6 +60,13 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
             toast.success("Task moved to trash");
+            setShowDeleteDialog(false);
+            onClose();
+        },
+        onError: (error: any) => {
+            console.error("Error deleting task:", error);
+            toast.error("Failed to delete task. It may have already been removed.");
+            setShowDeleteDialog(false);
             onClose();
         },
     });
@@ -143,6 +161,7 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
                                 onClick={() => toggleCompleteMutation.mutate()}
                                 variant={task.completed ? "outline" : "default"}
                                 className={!task.completed ? "bg-banana-500 hover:bg-banana-600 text-black" : ""}
+                                disabled={toggleCompleteMutation.isPending}
                             >
                                 {task.completed ? (
                                     <>
@@ -163,6 +182,7 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
                                 onClick={() => setShowDeleteDialog(true)} 
                                 variant="outline"
                                 className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                                disabled={softDeleteMutation.isPending}
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
@@ -209,7 +229,6 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
                 onClose={() => setShowDeleteDialog(false)}
                 onConfirm={() => {
                     softDeleteMutation.mutate();
-                    setShowDeleteDialog(false);
                 }}
                 itemName={task.title}
             />
