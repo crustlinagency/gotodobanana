@@ -3,8 +3,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { List } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Inbox, Trash2 } from "lucide-react";
+import { Plus, Inbox, Trash2, BarChart3 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface SidebarProps {
   selectedListId: string | null;
@@ -15,6 +16,7 @@ export default function Sidebar({ selectedListId, onSelectList }: SidebarProps) 
   const [isAddingList, setIsAddingList] = useState(false);
   const [newListName, setNewListName] = useState("");
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: lists = [] } = useQuery({
     queryKey: ["lists"],
@@ -76,6 +78,16 @@ export default function Sidebar({ selectedListId, onSelectList }: SidebarProps) 
         >
           <Inbox className="h-4 w-4 mr-2" />
           All Tasks
+        </Button>
+
+        {/* Analytics */}
+        <Button
+          variant="ghost"
+          className="w-full justify-start mb-2"
+          onClick={() => navigate("/analytics")}
+        >
+          <BarChart3 className="h-4 w-4 mr-2" />
+          Analytics
         </Button>
 
         {isAddingList ? (

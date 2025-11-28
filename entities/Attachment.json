@@ -1,0 +1,26 @@
+{
+  "name": "Attachment",
+  "description": "A file attachment for a task",
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "description": "ID of the task this attachment belongs to"
+    },
+    "fileName": {
+      "type": "string",
+      "description": "Original name of the file"
+    },
+    "fileUrl": {
+      "type": "string",
+      "description": "URL of the uploaded file"
+    },
+    "fileSize": {
+      "type": "number",
+      "description": "Size of the file in bytes"
+    },
+    "fileType": {
+      "type": "string",
+      "description": "MIME type of the file"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "Subtask",
+  "description": "A subtask within a parent task",
+  "properties": {
+    "parentTaskId": {
+      "type": "string",
+      "description": "ID of the parent task"
+    },
+    "title": {
+      "type": "string",
+      "description": "Title of the subtask"
+    },
+    "completed": {
+      "type": "boolean",
+      "description": "Whether the subtask is completed"
+    },
+    "completedAt": {
+      "type": "string",
+      "description": "Timestamp when subtask was completed"
+    },
+    "order": {
+      "type": "number",
+      "description": "Order position for sorting"
+    }
+  }
+}
