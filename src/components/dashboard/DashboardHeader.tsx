@@ -3,9 +3,10 @@ import { Input } from "@/components/ui/input";
 import { User } from "@/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Plus, Moon, Sun } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import NotificationBell from "./NotificationBell";
+import { useTheme } from "@/hooks/use-theme";
 
 interface DashboardHeaderProps {
     onNewTask: () => void;
@@ -14,28 +15,13 @@ interface DashboardHeaderProps {
 }
 
 export default function DashboardHeader({ onNewTask, onSearch, onNotificationTaskClick }: DashboardHeaderProps) {
-    const [isDark, setIsDark] = useState(false);
+    const { isDark, toggleTheme } = useTheme();
     const [searchQuery, setSearchQuery] = useState("");
 
     const { data: user } = useQuery({
         queryKey: ["user"],
         queryFn: async () => await User.me(),
     });
-
-    useEffect(() => {
-        const isDarkMode = document.documentElement.classList.contains("dark");
-        setIsDark(isDarkMode);
-    }, []);
-
-    const toggleDarkMode = () => {
-        const newMode = !isDark;
-        setIsDark(newMode);
-        if (newMode) {
-            document.documentElement.classList.add("dark");
-        } else {
-            document.documentElement.classList.remove("dark");
-        }
-    };
 
     const handleLogout = async () => {
         await User.logout();
@@ -91,7 +77,7 @@ export default function DashboardHeader({ onNewTask, onSearch, onNotificationTas
                         onTaskClick={onNotificationTaskClick || (() => {})} 
                     />
 
-                    <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
+                    <Button variant="ghost" size="icon" onClick={toggleTheme}>
                         {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                     </Button>
 

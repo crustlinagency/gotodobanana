@@ -15,6 +15,8 @@ import DailyOverview from "@/components/dashboard/DailyOverview";
 import FocusMode from "@/components/dashboard/FocusMode";
 import TrashView from "@/components/dashboard/TrashView";
 import WidgetsSidebar from "@/components/dashboard/WidgetsSidebar";
+import Breadcrumb from "@/components/dashboard/Breadcrumb";
+import Footer from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Keyboard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { toast } from "sonner";
@@ -270,6 +272,33 @@ export default function Dashboard() {
         setSelectedListId(null);
     };
 
+    // Generate breadcrumb items based on current state
+    const getBreadcrumbItems = () => {
+        const items = [];
+        
+        if (isTrashSelected) {
+            items.push({ label: "Trash" });
+        } else if (selectedListId) {
+            const selectedList = lists.find((l: any) => l.id === selectedListId);
+            if (selectedList) {
+                items.push({ label: selectedList.name });
+            }
+        } else {
+            items.push({ label: "All Tasks" });
+        }
+
+        // Add view type
+        if (currentView === "calendar") {
+            items.push({ label: "Calendar View" });
+        } else if (currentView === "kanban") {
+            items.push({ label: "Kanban View" });
+        } else if (isFocusMode) {
+            items.push({ label: "Focus Mode" });
+        }
+
+        return items;
+    };
+
     return (
         <div className="h-screen flex flex-col overflow-hidden">
             <DashboardHeader 
@@ -321,159 +350,167 @@ export default function Dashboard() {
                 <main className="flex-1 overflow-auto">
                     {isTrashSelected ? (
                         <div className="p-6">
+                            <Breadcrumb items={getBreadcrumbItems()} />
                             <TrashView />
                         </div>
                     ) : (
-                        <div className="flex h-full">
-                            <div className="flex-1 p-6 overflow-auto">
-                                <div className="mb-6">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div>
-                                            <h1 className="text-3xl font-bold">
-                                                {selectedListId ? "List Tasks" : "All Tasks"}
-                                            </h1>
-                                            <p className="text-muted-foreground mt-1">
-                                                {displayTasks.length} {displayTasks.length === 1 ? 'task' : 'tasks'}
-                                            </p>
-                                        </div>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button variant="outline" size="icon">
-                                                    <Keyboard className="h-4 w-4" />
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent className="max-w-xs">
-                                                <div className="space-y-2">
-                                                    <p className="font-semibold">Keyboard Shortcuts</p>
-                                                    <div className="space-y-1 text-xs">
-                                                        <div>Ctrl+N - Create task</div>
-                                                        <div>Ctrl+K - Search</div>
-                                                        <div>Ctrl+F - Focus Mode</div>
+                        <div className="flex h-full flex-col">
+                            <div className="flex flex-1 overflow-hidden">
+                                <div className="flex-1 p-6 overflow-auto">
+                                    <Breadcrumb items={getBreadcrumbItems()} />
+                                    
+                                    <div className="mb-6">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div>
+                                                <h1 className="text-3xl font-bold">
+                                                    {selectedListId ? "List Tasks" : "All Tasks"}
+                                                </h1>
+                                                <p className="text-muted-foreground mt-1">
+                                                    {displayTasks.length} {displayTasks.length === 1 ? 'task' : 'tasks'}
+                                                </p>
+                                            </div>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button variant="outline" size="icon">
+                                                        <Keyboard className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="max-w-xs">
+                                                    <div className="space-y-2">
+                                                        <p className="font-semibold">Keyboard Shortcuts</p>
+                                                        <div className="space-y-1 text-xs">
+                                                            <div>Ctrl+N - Create task</div>
+                                                            <div>Ctrl+K - Search</div>
+                                                            <div>Ctrl+F - Focus Mode</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </TooltipContent>
-                                        </Tooltip>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
                                     </div>
+
+                                    {currentView === "list" && (
+                                        <div className="mb-6">
+                                            <FocusMode
+                                                isActive={isFocusMode}
+                                                onToggle={handleToggleFocusMode}
+                                                filteredTasksCount={displayTasks.length}
+                                                totalTasksCount={tasks.length}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <TaskToolbar
+                                        currentView={currentView}
+                                        onViewChange={setCurrentView}
+                                        onGroupByChange={currentView === "list" ? setGroupBy : undefined}
+                                        onFilterChange={handleFilterChange}
+                                        activeFilters={filters}
+                                        tags={allTags}
+                                        lists={lists}
+                                    />
+
+                                    {currentView === "list" && (
+                                        <>
+                                            <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
+                                            
+                                            {tasksLoading ? (
+                                                <div className="flex items-center justify-center py-16">
+                                                    <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
+                                                </div>
+                                            ) : groupBy !== "none" ? (
+                                                <TaskGroupView
+                                                    tasks={displayTasks}
+                                                    groupBy={groupBy}
+                                                    onEditTask={handleEditTask}
+                                                    lists={lists}
+                                                />
+                                            ) : (
+                                                <TaskList tasks={displayTasks} onEditTask={handleEditTask} />
+                                            )}
+                                        </>
+                                    )}
+
+                                    {currentView === "calendar" && (
+                                        <>
+                                            {tasksLoading ? (
+                                                <div className="flex items-center justify-center py-16">
+                                                    <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
+                                                </div>
+                                            ) : (
+                                                <CalendarView
+                                                    tasks={displayTasks}
+                                                    onEditTask={handleEditTask}
+                                                    onNewTask={handleNewTask}
+                                                />
+                                            )}
+                                        </>
+                                    )}
+
+                                    {currentView === "kanban" && (
+                                        <>
+                                            {tasksLoading ? (
+                                                <div className="flex items-center justify-center py-16">
+                                                    <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
+                                                </div>
+                                            ) : (
+                                                <KanbanView
+                                                    tasks={displayTasks}
+                                                    onEditTask={handleEditTask}
+                                                    onNewTask={handleNewTask}
+                                                />
+                                            )}
+                                        </>
+                                    )}
                                 </div>
 
+                                {/* Right Sidebar */}
                                 {currentView === "list" && (
-                                    <div className="mb-6">
-                                        <FocusMode
-                                            isActive={isFocusMode}
-                                            onToggle={handleToggleFocusMode}
-                                            filteredTasksCount={displayTasks.length}
-                                            totalTasksCount={tasks.length}
-                                        />
+                                    <div 
+                                        className={`border-l bg-muted/30 p-4 overflow-auto transition-all duration-300 ease-in-out ${
+                                            isRightSidebarOpen ? "w-80" : "w-0"
+                                        }`}
+                                        style={{ overflow: isRightSidebarOpen ? "auto" : "hidden" }}
+                                    >
+                                        {isRightSidebarOpen && (
+                                            <WidgetsSidebar
+                                                totalTasks={tasks.length}
+                                                completedTasks={completedTasks}
+                                                overdueTasks={overdueTasks}
+                                                todayTasks={todayTasks}
+                                                tasks={tasks}
+                                            />
+                                        )}
                                     </div>
                                 )}
 
-                                <TaskToolbar
-                                    currentView={currentView}
-                                    onViewChange={setCurrentView}
-                                    onGroupByChange={currentView === "list" ? setGroupBy : undefined}
-                                    onFilterChange={handleFilterChange}
-                                    activeFilters={filters}
-                                    tags={allTags}
-                                    lists={lists}
-                                />
-
+                                {/* Right Sidebar Toggle Button */}
                                 {currentView === "list" && (
-                                    <>
-                                        <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
-                                        
-                                        {tasksLoading ? (
-                                            <div className="flex items-center justify-center py-16">
-                                                <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
-                                            </div>
-                                        ) : groupBy !== "none" ? (
-                                            <TaskGroupView
-                                                tasks={displayTasks}
-                                                groupBy={groupBy}
-                                                onEditTask={handleEditTask}
-                                                lists={lists}
-                                            />
-                                        ) : (
-                                            <TaskList tasks={displayTasks} onEditTask={handleEditTask} />
-                                        )}
-                                    </>
-                                )}
-
-                                {currentView === "calendar" && (
-                                    <>
-                                        {tasksLoading ? (
-                                            <div className="flex items-center justify-center py-16">
-                                                <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
-                                            </div>
-                                        ) : (
-                                            <CalendarView
-                                                tasks={displayTasks}
-                                                onEditTask={handleEditTask}
-                                                onNewTask={handleNewTask}
-                                            />
-                                        )}
-                                    </>
-                                )}
-
-                                {currentView === "kanban" && (
-                                    <>
-                                        {tasksLoading ? (
-                                            <div className="flex items-center justify-center py-16">
-                                                <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
-                                            </div>
-                                        ) : (
-                                            <KanbanView
-                                                tasks={displayTasks}
-                                                onEditTask={handleEditTask}
-                                                onNewTask={handleNewTask}
-                                            />
-                                        )}
-                                    </>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="absolute right-0 top-4 z-10 h-8 w-8 rounded-l-md rounded-r-none border-l border-t border-b bg-background shadow-sm hover:bg-accent"
+                                                style={{ right: isRightSidebarOpen ? "320px" : "0" }}
+                                                onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+                                            >
+                                                {isRightSidebarOpen ? (
+                                                    <PanelRightClose className="h-4 w-4" />
+                                                ) : (
+                                                    <PanelRightOpen className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left">
+                                            {isRightSidebarOpen ? "Hide Widgets" : "Show Widgets"}
+                                        </TooltipContent>
+                                    </Tooltip>
                                 )}
                             </div>
 
-                            {/* Right Sidebar */}
-                            {currentView === "list" && (
-                                <div 
-                                    className={`border-l bg-muted/30 p-4 overflow-auto transition-all duration-300 ease-in-out ${
-                                        isRightSidebarOpen ? "w-80" : "w-0"
-                                    }`}
-                                    style={{ overflow: isRightSidebarOpen ? "auto" : "hidden" }}
-                                >
-                                    {isRightSidebarOpen && (
-                                        <WidgetsSidebar
-                                            totalTasks={tasks.length}
-                                            completedTasks={completedTasks}
-                                            overdueTasks={overdueTasks}
-                                            todayTasks={todayTasks}
-                                            tasks={tasks}
-                                        />
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Right Sidebar Toggle Button */}
-                            {currentView === "list" && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="absolute right-0 top-4 z-10 h-8 w-8 rounded-l-md rounded-r-none border-l border-t border-b bg-background shadow-sm hover:bg-accent"
-                                            style={{ right: isRightSidebarOpen ? "320px" : "0" }}
-                                            onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-                                        >
-                                            {isRightSidebarOpen ? (
-                                                <PanelRightClose className="h-4 w-4" />
-                                            ) : (
-                                                <PanelRightOpen className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="left">
-                                        {isRightSidebarOpen ? "Hide Widgets" : "Show Widgets"}
-                                    </TooltipContent>
-                                </Tooltip>
-                            )}
+                            {/* Footer at bottom of dashboard */}
+                            <Footer />
                         </div>
                     )}
                 </main>
