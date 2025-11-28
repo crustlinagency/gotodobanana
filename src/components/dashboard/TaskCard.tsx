@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Edit, Trash2, Tag, MoreVertical, GripVertical, ExternalLink } from "lucide-react";
+import { Calendar, Edit, Trash2, Tag, MoreVertical, GripVertical, ExternalLink, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import {
@@ -14,6 +14,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import TaskDetailView from "./TaskDetailView";
+import CompletionCelebration from "./CompletionCelebration";
+import InlineTaskEdit from "./InlineTaskEdit";
+import { toast } from "sonner";
 
 interface TaskCardProps {
   task: any;
@@ -31,17 +34,36 @@ export default function TaskCard({
   showSelection = false,
 }: TaskCardProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isInlineEditing, setIsInlineEditing] = useState(false);
   const queryClient = useQueryClient();
 
   const toggleCompleteMutation = useMutation({
     mutationFn: async () => {
+      const newCompletedState = !task.completed;
+      
       await Task.update(task.id, {
-        completed: !task.completed,
-        completedAt: !task.completed ? new Date().toISOString() : null,
-        status: !task.completed ? "completed" : task.status || "todo",
+        completed: newCompletedState,
+        completedAt: newCompletedState ? new Date().toISOString() : null,
+        status: newCompletedState ? "completed" : task.status || "todo",
       });
+      
+      return newCompletedState;
     },
-    onSuccess: () => {
+    onSuccess: (wasCompleted) => {
+      if (wasCompleted) {
+        setIsCompleting(true);
+        setShowCelebration(true);
+        toast.success("Task completed! 🎉", {
+          description: task.title,
+        });
+        
+        setTimeout(() => {
+          setIsCompleting(false);
+        }, 400);
+      }
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
@@ -52,6 +74,7 @@ export default function TaskCard({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Task deleted");
     },
   });
 
@@ -78,7 +101,7 @@ export default function TaskCard({
       <Card 
         className={`p-4 task-card-shadow transition-all duration-200 hover:scale-[1.01] ${
           isSelected ? "ring-2 ring-banana-500 bg-banana-50 dark:bg-banana-950/20" : ""
-        }`}
+        } ${isCompleting ? "animate-task-complete" : ""}`}
         data-task-card-id={task.id}
         draggable
       >
@@ -99,71 +122,90 @@ export default function TaskCard({
             <GripVertical className="h-5 w-5" />
           </div>
 
-          <Checkbox
-            checked={task.completed}
-            onCheckedChange={() => toggleCompleteMutation.mutate()}
-            className="mt-1"
-          />
+          <div className={task.completed ? "animate-checkmark-pop" : ""}>
+            <Checkbox
+              checked={task.completed}
+              onCheckedChange={() => toggleCompleteMutation.mutate()}
+              className="mt-1"
+            />
+          </div>
 
           <div className="flex-1 space-y-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h3
-                    className={`font-medium cursor-pointer hover:text-banana-600 transition-colors ${
-                      task.completed ? "line-through text-muted-foreground" : ""
-                    }`}
-                    onClick={() => setIsDetailOpen(true)}
-                  >
-                    {task.title}
-                  </h3>
+              <div className="flex-1 min-w-0">
+                {isInlineEditing ? (
+                  <InlineTaskEdit
+                    task={task}
+                    onCancel={() => setIsInlineEditing(false)}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <h3
+                      className={`font-medium cursor-pointer hover:text-banana-600 transition-colors break-words ${
+                        task.completed ? "line-through text-muted-foreground" : ""
+                      }`}
+                      onClick={() => setIsDetailOpen(true)}
+                    >
+                      {task.title}
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                      onClick={() => setIsInlineEditing(true)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {(task.description || task.tags?.length > 0) && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                    onClick={() => setIsDetailOpen(true)}
+                    className="h-8 w-8"
+                    onClick={() => setIsExpanded(!isExpanded)}
                   >
-                    <ExternalLink className="h-3 w-3" />
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
                   </Button>
-                </div>
+                )}
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setIsDetailOpen(true)}>
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onEdit(task)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        if (confirm("Delete this task?")) {
+                          deleteTaskMutation.mutate();
+                        }
+                      }}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsDetailOpen(true)}>
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View Details
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onEdit(task)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (confirm("Delete this task?")) {
-                        deleteTaskMutation.mutate();
-                      }
-                    }}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
-
-            {task.description && (
-              <div 
-                className="text-sm text-muted-foreground line-clamp-2 prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: task.description }}
-              />
-            )}
 
             <div className="flex flex-wrap items-center gap-2">
               {task.priority && (
@@ -189,21 +231,37 @@ export default function TaskCard({
                   {isOverdue && " (Overdue)"}
                 </Badge>
               )}
-
-              {task.tags && task.tags.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {task.tags.map((tag: string, index: number) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      <Tag className="h-3 w-3 mr-1" />
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
             </div>
+
+            {isExpanded && (
+              <div className="space-y-2 pt-2 border-t animate-slide-up">
+                {task.description && (
+                  <div 
+                    className="text-sm text-muted-foreground prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: task.description }}
+                  />
+                )}
+                
+                {task.tags && task.tags.length > 0 && (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {task.tags.map((tag: string, index: number) => (
+                      <Badge key={index} variant="secondary" className="text-xs">
+                        <Tag className="h-3 w-3 mr-1" />
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </Card>
+
+      <CompletionCelebration 
+        show={showCelebration} 
+        onComplete={() => setShowCelebration(false)}
+      />
 
       <TaskDetailView
         task={task}

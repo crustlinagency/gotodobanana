@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { User, Task } from "@/entities";
+import { useLists } from "@/hooks/use-lists";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import Sidebar from "@/components/dashboard/Sidebar";
 import StatsWidget from "@/components/dashboard/StatsWidget";
@@ -10,6 +11,8 @@ import TaskForm from "@/components/dashboard/TaskForm";
 import ViewSwitcher from "@/components/dashboard/ViewSwitcher";
 import CalendarView from "@/components/dashboard/CalendarView";
 import KanbanView from "@/components/dashboard/KanbanView";
+import TaskGroupView from "@/components/dashboard/TaskGroupView";
+import RecentActivityFeed from "@/components/dashboard/RecentActivityFeed";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
@@ -19,6 +22,7 @@ export default function Dashboard() {
     const [editingTask, setEditingTask] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [currentView, setCurrentView] = useState<"list" | "calendar" | "kanban">("list");
+    const [groupBy, setGroupBy] = useState<"none" | "list" | "priority" | "dueDate" | "status">("none");
     const [filters, setFilters] = useState({
         priority: "all",
         status: "all",
@@ -26,6 +30,7 @@ export default function Dashboard() {
     });
 
     const navigate = useNavigate();
+    const { data: lists = [] } = useLists();
 
     const { data: user, isLoading: userLoading } = useQuery({
         queryKey: ["user"],
@@ -53,7 +58,6 @@ export default function Dashboard() {
 
                 let filteredTasks = result || [];
 
-                // Apply search
                 if (searchQuery.trim()) {
                     const query = searchQuery.toLowerCase();
                     filteredTasks = filteredTasks.filter((task: any) =>
@@ -63,7 +67,6 @@ export default function Dashboard() {
                     );
                 }
 
-                // Apply filters
                 if (filters.priority !== "all") {
                     filteredTasks = filteredTasks.filter(
                         (task: any) => task.priority === filters.priority
@@ -169,20 +172,37 @@ export default function Dashboard() {
                             </p>
                         </div>
 
-                        <StatsWidget
-                            totalTasks={tasks.length}
-                            completedTasks={completedTasks}
-                            overdueTasks={overdueTasks}
-                            todayTasks={todayTasks}
-                        />
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                            <div className="lg:col-span-2">
+                                <StatsWidget
+                                    totalTasks={tasks.length}
+                                    completedTasks={completedTasks}
+                                    overdueTasks={overdueTasks}
+                                    todayTasks={todayTasks}
+                                />
+                            </div>
+                            <div>
+                                <RecentActivityFeed tasks={tasks} />
+                            </div>
+                        </div>
 
                         {currentView === "list" && (
                             <>
-                                <FilterBar onFilterChange={handleFilterChange} />
+                                <FilterBar 
+                                    onFilterChange={handleFilterChange}
+                                    onGroupByChange={setGroupBy}
+                                />
                                 {tasksLoading ? (
                                     <div className="flex items-center justify-center py-16">
                                         <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
                                     </div>
+                                ) : groupBy !== "none" ? (
+                                    <TaskGroupView
+                                        tasks={tasks}
+                                        groupBy={groupBy}
+                                        onEditTask={handleEditTask}
+                                        lists={lists}
+                                    />
                                 ) : (
                                     <TaskList tasks={tasks} onEditTask={handleEditTask} />
                                 )}
