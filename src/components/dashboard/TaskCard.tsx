@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Edit, Trash2, Tag, MoreVertical } from "lucide-react";
+import { Calendar, Edit, Trash2, Tag, MoreVertical, GripVertical } from "lucide-react";
 import { format } from "date-fns";
 import {
   DropdownMenu,
@@ -61,9 +61,25 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
     !task.completed &&
     new Date(task.dueDate) < new Date();
 
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
   return (
-    <Card className="p-4 task-card-shadow transition-all duration-200 hover:scale-[1.01]">
+    <Card 
+      className="p-4 task-card-shadow transition-all duration-200 hover:scale-[1.01]"
+      data-task-card-id={task.id}
+      draggable
+    >
       <div className="flex items-start gap-3">
+        <div 
+          className="cursor-grab active:cursor-grabbing pt-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <GripVertical className="h-5 w-5" />
+        </div>
+
         <Checkbox
           checked={task.completed}
           onCheckedChange={() => toggleCompleteMutation.mutate()}
@@ -107,9 +123,10 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
           </div>
 
           {task.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {task.description}
-            </p>
+            <div 
+              className="text-sm text-muted-foreground line-clamp-2 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: task.description }}
+            />
           )}
 
           <div className="flex flex-wrap items-center gap-2">

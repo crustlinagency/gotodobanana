@@ -5,13 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, Plus, Moon, Sun } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import NotificationBell from "./NotificationBell";
 
 interface DashboardHeaderProps {
     onNewTask: () => void;
     onSearch: (query: string) => void;
+    onNotificationTaskClick?: (task: any) => void;
 }
 
-export default function DashboardHeader({ onNewTask, onSearch }: DashboardHeaderProps) {
+export default function DashboardHeader({ onNewTask, onSearch, onNotificationTaskClick }: DashboardHeaderProps) {
     const [isDark, setIsDark] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -84,6 +86,10 @@ export default function DashboardHeader({ onNewTask, onSearch }: DashboardHeader
                         <Plus className="h-4 w-4 mr-2" />
                         <span className="hidden sm:inline">New Task</span>
                     </Button>
+
+                    <NotificationBell 
+                        onTaskClick={onNotificationTaskClick || (() => {})} 
+                    />
 
                     <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
                         {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}

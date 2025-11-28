@@ -134,9 +134,17 @@ export default function Dashboard() {
         setFilters((prev) => ({ ...prev, ...newFilters }));
     };
 
+    const handleNotificationTaskClick = (task: any) => {
+        handleEditTask(task);
+    };
+
     return (
         <div className="h-screen flex flex-col overflow-hidden">
-            <DashboardHeader onNewTask={handleNewTask} onSearch={setSearchQuery} />
+            <DashboardHeader 
+                onNewTask={handleNewTask} 
+                onSearch={setSearchQuery}
+                onNotificationTaskClick={handleNotificationTaskClick}
+            />
 
             <div className="flex-1 flex overflow-hidden">
                 <Sidebar
