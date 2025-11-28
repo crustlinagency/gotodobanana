@@ -1,9 +1,12 @@
 import TaskCard from "./TaskCard";
+import BulkActionsToolbar from "./BulkActionsToolbar";
 import { AlertCircle } from "lucide-react";
 import { Task } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface TaskListProps {
   tasks: any[];
@@ -11,6 +14,8 @@ interface TaskListProps {
 }
 
 export default function TaskList({ tasks, onEditTask }: TaskListProps) {
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [showSelection, setShowSelection] = useState(false);
   const queryClient = useQueryClient();
   const draggedTaskIdRef = useRef<string | null>(null);
   const draggedOverTaskIdRef = useRef<string | null>(null);
@@ -25,6 +30,38 @@ export default function TaskList({ tasks, onEditTask }: TaskListProps) {
     onError: (error) => {
       console.error("Error reordering tasks:", error);
       toast.error("Failed to reorder tasks");
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (taskIds: string[]) => {
+      await Task.batch().delete(taskIds);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      setSelectedTaskIds(new Set());
+      setShowSelection(false);
+      toast.success("Tasks deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Error deleting tasks:", error);
+      toast.error("Failed to delete tasks");
+    },
+  });
+
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async (updates: Array<{ id: string; data: any }>) => {
+      await Task.batch().update(updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      setSelectedTaskIds(new Set());
+      setShowSelection(false);
+      toast.success("Tasks updated successfully");
+    },
+    onError: (error) => {
+      console.error("Error updating tasks:", error);
+      toast.error("Failed to update tasks");
     },
   });
 
@@ -78,12 +115,10 @@ export default function TaskList({ tasks, onEditTask }: TaskListProps) {
       const targetIndex = tasks.findIndex((t) => t.id === targetId);
 
       if (draggedIndex !== -1 && targetIndex !== -1) {
-        // Reorder tasks optimistically
         const newTasks = [...tasks];
         const [removed] = newTasks.splice(draggedIndex, 1);
         newTasks.splice(targetIndex, 0, removed);
 
-        // Update order for affected tasks
         newTasks.forEach((task, index) => {
           if (task.order !== index) {
             reorderTasksMutation.mutate({ taskId: task.id, newOrder: index });
@@ -107,6 +142,52 @@ export default function TaskList({ tasks, onEditTask }: TaskListProps) {
     };
   }, [tasks, reorderTasksMutation]);
 
+  const handleSelectTask = (taskId: string, selected: boolean) => {
+    setSelectedTaskIds((prev) => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(taskId);
+      } else {
+        newSet.delete(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedTaskIds(new Set(tasks.map((t) => t.id)));
+    } else {
+      setSelectedTaskIds(new Set());
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    if (confirm(`Delete ${selectedTaskIds.size} selected tasks?`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedTaskIds));
+    }
+  };
+
+  const handleMoveToList = (listId: string) => {
+    const updates = Array.from(selectedTaskIds).map((id) => ({
+      id,
+      data: { listId },
+    }));
+    bulkUpdateMutation.mutate(updates);
+  };
+
+  const handleMarkComplete = () => {
+    const updates = Array.from(selectedTaskIds).map((id) => ({
+      id,
+      data: { 
+        completed: true, 
+        completedAt: new Date().toISOString(),
+        status: "completed",
+      },
+    }));
+    bulkUpdateMutation.mutate(updates);
+  };
+
   if (tasks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -119,15 +200,74 @@ export default function TaskList({ tasks, onEditTask }: TaskListProps) {
     );
   }
 
+  const allSelected = tasks.length > 0 && selectedTaskIds.size === tasks.length;
+  const someSelected = selectedTaskIds.size > 0 && selectedTaskIds.size < tasks.length;
+
   return (
-    <div className="space-y-3">
-      {tasks.map((task) => (
-        <TaskCard
-          key={task.id}
-          task={task}
-          onEdit={onEditTask}
-        />
-      ))}
-    </div>
+    <>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {showSelection ? (
+            <>
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={handleSelectAll}
+                className={someSelected ? "data-[state=checked]:bg-banana-500" : ""}
+              />
+              <span className="text-sm text-muted-foreground">
+                {selectedTaskIds.size > 0 
+                  ? `${selectedTaskIds.size} of ${tasks.length} selected`
+                  : "Select tasks"}
+              </span>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSelection(true)}
+            >
+              Select Tasks
+            </Button>
+          )}
+        </div>
+        
+        {showSelection && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setShowSelection(false);
+              setSelectedTaskIds(new Set());
+            }}
+          >
+            Cancel
+          </Button>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            onEdit={onEditTask}
+            isSelected={selectedTaskIds.has(task.id)}
+            onSelectChange={(selected) => handleSelectTask(task.id, selected)}
+            showSelection={showSelection}
+          />
+        ))}
+      </div>
+
+      <BulkActionsToolbar
+        selectedCount={selectedTaskIds.size}
+        onDeleteSelected={handleDeleteSelected}
+        onMoveToList={handleMoveToList}
+        onMarkComplete={handleMarkComplete}
+        onClearSelection={() => {
+          setSelectedTaskIds(new Set());
+          setShowSelection(false);
+        }}
+      />
+    </>
   );
 }

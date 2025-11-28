@@ -18,9 +18,18 @@ import TaskDetailView from "./TaskDetailView";
 interface TaskCardProps {
   task: any;
   onEdit: (task: any) => void;
+  isSelected?: boolean;
+  onSelectChange?: (selected: boolean) => void;
+  showSelection?: boolean;
 }
 
-export default function TaskCard({ task, onEdit }: TaskCardProps) {
+export default function TaskCard({ 
+  task, 
+  onEdit, 
+  isSelected = false,
+  onSelectChange,
+  showSelection = false,
+}: TaskCardProps) {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -67,11 +76,23 @@ export default function TaskCard({ task, onEdit }: TaskCardProps) {
   return (
     <>
       <Card 
-        className="p-4 task-card-shadow transition-all duration-200 hover:scale-[1.01]"
+        className={`p-4 task-card-shadow transition-all duration-200 hover:scale-[1.01] ${
+          isSelected ? "ring-2 ring-banana-500 bg-banana-50 dark:bg-banana-950/20" : ""
+        }`}
         data-task-card-id={task.id}
         draggable
       >
         <div className="flex items-start gap-3">
+          {showSelection && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={(checked) => {
+                onSelectChange?.(checked as boolean);
+              }}
+              className="mt-1"
+            />
+          )}
+
           <div 
             className="cursor-grab active:cursor-grabbing pt-1 text-muted-foreground hover:text-foreground transition-colors"
           >
