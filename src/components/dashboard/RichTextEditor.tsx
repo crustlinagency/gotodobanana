@@ -1,5 +1,10 @@
 import { RichTextEditorComponent, Toolbar, Inject, Image, Link, HtmlEditor, QuickToolbar, Table, FileManager, PasteCleanup, Count, FormatPainter } from "@syncfusion/ej2-react-richtexteditor";
+import { registerLicense } from "@syncfusion/ej2-base";
 import { useEffect, useRef } from "react";
+
+// Register Syncfusion license - MUST be done in each file using Syncfusion components
+const syncfusionKey = import.meta.env.VITE_SYNCFUSION_LICENSE_KEY || "Ngo9BigBOggjHTQxAR8/V1NCaF5cXmZCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdnWXZcdXRWRmVcV0J2WkY=";
+registerLicense(syncfusionKey);
 
 interface RichTextEditorProps {
     content: string;

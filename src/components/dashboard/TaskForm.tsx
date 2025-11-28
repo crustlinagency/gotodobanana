@@ -26,6 +26,11 @@ import TaskComments from "./TaskComments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { toast } from "sonner";
+import { registerLicense } from "@syncfusion/ej2-base";
+
+// Register Syncfusion license for dialog components
+const syncfusionKey = import.meta.env.VITE_SYNCFUSION_LICENSE_KEY || "Ngo9BigBOggjHTQxAR8/V1NCaF5cXmZCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdnWXZcdXRWRmVcV0J2WkY=";
+registerLicense(syncfusionKey);
 
 interface TaskFormProps {
   open: boolean;
