@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { User, Task } from "@/entities";
 import { useLists } from "@/hooks/use-lists";
@@ -22,10 +22,10 @@ import { Loader2, Keyboard } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-    HoverCard,
-    HoverCardContent,
-    HoverCardTrigger,
-} from "@/components/ui/hover-card";
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function Dashboard() {
     const [selectedListId, setSelectedListId] = useState<string | null>(null);
@@ -35,7 +35,6 @@ export default function Dashboard() {
     const [currentView, setCurrentView] = useState<"list" | "calendar" | "kanban">("list");
     const [groupBy, setGroupBy] = useState<"none" | "list" | "priority" | "dueDate" | "status">("none");
     const [isFocusMode, setIsFocusMode] = useState(false);
-    const searchInputRef = useRef<HTMLInputElement>(null);
     const [filters, setFilters] = useState({
         priority: "all",
         status: "all",
@@ -270,32 +269,23 @@ export default function Dashboard() {
                                     {selectedListId ? "List Tasks" : "All Tasks"}
                                 </h1>
                                 <div className="flex items-center gap-2">
-                                    <HoverCard>
-                                        <HoverCardTrigger asChild>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
                                             <Button variant="outline" size="icon">
                                                 <Keyboard className="h-4 w-4" />
                                             </Button>
-                                        </HoverCardTrigger>
-                                        <HoverCardContent className="w-80">
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
                                             <div className="space-y-2">
-                                                <h4 className="font-semibold">Keyboard Shortcuts</h4>
-                                                <div className="space-y-1 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Create task</span>
-                                                        <kbd className="px-2 py-1 bg-muted rounded">Ctrl+N</kbd>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Search</span>
-                                                        <kbd className="px-2 py-1 bg-muted rounded">Ctrl+K</kbd>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">Focus Mode</span>
-                                                        <kbd className="px-2 py-1 bg-muted rounded">Ctrl+F</kbd>
-                                                    </div>
+                                                <p className="font-semibold">Keyboard Shortcuts</p>
+                                                <div className="space-y-1 text-xs">
+                                                    <div>Ctrl+N - Create task</div>
+                                                    <div>Ctrl+K - Search</div>
+                                                    <div>Ctrl+F - Focus Mode</div>
                                                 </div>
                                             </div>
-                                        </HoverCardContent>
-                                    </HoverCard>
+                                        </TooltipContent>
+                                    </Tooltip>
                                     <ViewSwitcher
                                         currentView={currentView}
                                         onViewChange={setCurrentView}
