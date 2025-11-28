@@ -1,10 +1,5 @@
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
-import Placeholder from "@tiptap/extension-placeholder";
-import { Button } from "@/components/ui/button";
-import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Undo, Redo } from "lucide-react";
-import { useEffect } from "react";
+import { RichTextEditorComponent, Toolbar, Inject, Image, Link, HtmlEditor, QuickToolbar, Table, FileManager, PasteCleanup, Count, FormatPainter } from "@syncfusion/ej2-react-richtexteditor";
+import { useEffect, useRef } from "react";
 
 interface RichTextEditorProps {
     content: string;
@@ -13,116 +8,84 @@ interface RichTextEditorProps {
 }
 
 export default function RichTextEditor({ content, onChange, placeholder }: RichTextEditorProps) {
-    const editor = useEditor({
-        extensions: [
-            StarterKit,
-            Link.configure({
-                openOnClick: false,
-                HTMLAttributes: {
-                    class: "text-banana-600 underline hover:text-banana-700",
-                },
-            }),
-            Placeholder.configure({
-                placeholder: placeholder || "Write your task description...",
-            }),
-        ],
-        content: content,
-        onUpdate: ({ editor }) => {
-            onChange(editor.getHTML());
-        },
-        editorProps: {
-            attributes: {
-                class: "prose prose-sm max-w-none focus:outline-none min-h-[120px] p-3",
-            },
-        },
-    });
+    const rteRef = useRef<RichTextEditorComponent>(null);
 
     useEffect(() => {
-        if (editor && content !== editor.getHTML()) {
-            editor.commands.setContent(content);
+        if (rteRef.current && content !== rteRef.current.value) {
+            rteRef.current.value = content;
         }
-    }, [content, editor]);
+    }, [content]);
 
-    if (!editor) {
-        return null;
-    }
-
-    const setLink = () => {
-        const url = window.prompt("Enter URL:");
-        if (url) {
-            editor.chain().focus().setLink({ href: url }).run();
+    const handleChange = () => {
+        if (rteRef.current) {
+            onChange(rteRef.current.value);
         }
     };
 
+    const toolbarSettings = {
+        items: [
+            'Bold', 'Italic', 'Underline', 'StrikeThrough', '|',
+            'FontName', 'FontSize', 'FontColor', 'BackgroundColor', '|',
+            'Formats', 'Alignments', '|',
+            'NumberFormatList', 'BulletFormatList', '|',
+            'CreateLink', 'Image', '|',
+            'Indent', 'Outdent', '|',
+            'CreateTable', '|',
+            'ClearFormat', 'SourceCode', '|',
+            'Undo', 'Redo'
+        ]
+    };
+
+    const quickToolbarSettings = {
+        image: [
+            'Replace', 'Align', 'Caption', 'Remove', 'InsertLink', 'OpenImageLink', '-',
+            'EditImageLink', 'RemoveImageLink', 'Display', 'AltText', 'Dimension'
+        ],
+        link: ['Open', 'Edit', 'UnLink']
+    };
+
+    const insertImageSettings = {
+        saveFormat: "Base64",
+        saveUrl: null,
+        path: null
+    };
+
+    const pasteCleanupSettings = {
+        prompt: false,
+        plainText: false,
+        keepFormat: true
+    };
+
     return (
-        <div className="border rounded-lg overflow-hidden">
-            <div className="flex items-center gap-1 p-2 border-b bg-muted/30">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleBold().run()}
-                    className={editor.isActive("bold") ? "bg-muted" : ""}
-                >
-                    <Bold className="h-4 w-4" />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleItalic().run()}
-                    className={editor.isActive("italic") ? "bg-muted" : ""}
-                >
-                    <Italic className="h-4 w-4" />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleBulletList().run()}
-                    className={editor.isActive("bulletList") ? "bg-muted" : ""}
-                >
-                    <List className="h-4 w-4" />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().toggleOrderedList().run()}
-                    className={editor.isActive("orderedList") ? "bg-muted" : ""}
-                >
-                    <ListOrdered className="h-4 w-4" />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={setLink}
-                    className={editor.isActive("link") ? "bg-muted" : ""}
-                >
-                    <LinkIcon className="h-4 w-4" />
-                </Button>
-                <div className="flex-1" />
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().undo().run()}
-                    disabled={!editor.can().undo()}
-                >
-                    <Undo className="h-4 w-4" />
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => editor.chain().focus().redo().run()}
-                    disabled={!editor.can().redo()}
-                >
-                    <Redo className="h-4 w-4" />
-                </Button>
-            </div>
-            <EditorContent editor={editor} />
+        <div className="syncfusion-rte-wrapper border rounded-lg overflow-hidden">
+            <RichTextEditorComponent
+                ref={rteRef}
+                value={content}
+                change={handleChange}
+                placeholder={placeholder || "Write your task description..."}
+                toolbarSettings={toolbarSettings}
+                quickToolbarSettings={quickToolbarSettings}
+                insertImageSettings={insertImageSettings}
+                pasteCleanupSettings={pasteCleanupSettings}
+                height={320}
+                enableResize={false}
+                showCharCount={true}
+                maxLength={5000}
+                floatingToolbarOffset={0}
+            >
+                <Inject services={[
+                    Toolbar, 
+                    Image, 
+                    Link, 
+                    HtmlEditor, 
+                    QuickToolbar, 
+                    Table, 
+                    FileManager, 
+                    PasteCleanup,
+                    Count,
+                    FormatPainter
+                ]} />
+            </RichTextEditorComponent>
         </div>
     );
 }

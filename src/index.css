@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Syncfusion styles */
+@import "@syncfusion/ej2-base/styles/material.css";
+@import "@syncfusion/ej2-buttons/styles/material.css";
+@import "@syncfusion/ej2-inputs/styles/material.css";
+@import "@syncfusion/ej2-popups/styles/material.css";
+@import "@syncfusion/ej2-lists/styles/material.css";
+@import "@syncfusion/ej2-navigations/styles/material.css";
+@import "@syncfusion/ej2-splitbuttons/styles/material.css";
+@import "@syncfusion/ej2-dropdowns/styles/material.css";
+@import "@syncfusion/ej2-richtexteditor/styles/material.css";
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -137,4 +148,28 @@
   .animate-task-complete {
     animation: checkmark-pop 0.4s ease-in-out;
   }
+}
+
+/* Syncfusion RTE customization to match app theme */
+.syncfusion-rte-wrapper .e-richtexteditor {
+  border: none;
+}
+
+.syncfusion-rte-wrapper .e-rte-toolbar {
+  background: hsl(var(--muted));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.syncfusion-rte-wrapper .e-rte-content {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dark .syncfusion-rte-wrapper .e-rte-toolbar {
+  background: hsl(var(--muted));
+}
+
+.dark .syncfusion-rte-wrapper .e-rte-content {
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
 }

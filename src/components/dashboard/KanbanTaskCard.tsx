@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Tag } from "lucide-react";
 import { format } from "date-fns";
+import { getTaskPreview } from "@/lib/html-utils";
 
 interface KanbanTaskCardProps {
     task: any;
@@ -39,7 +40,7 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
 
             {task.description && (
                 <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                    {task.description}
+                    {getTaskPreview(task.description, 80)}
                 </p>
             )}
 
