@@ -178,6 +178,8 @@ export default function Dashboard() {
         ? tasks.filter((task: any) => task.priority === "High" && !task.completed)
         : tasks;
 
+    console.log("Display tasks after Focus Mode:", displayTasks.length, "tasks (Focus Mode:", isFocusMode, ")");
+
     useEffect(() => {
         if (!userLoading && !user) {
             User.login();
@@ -335,6 +337,7 @@ export default function Dashboard() {
                                             isActive={isFocusMode}
                                             onToggle={handleToggleFocusMode}
                                             filteredTasksCount={displayTasks.length}
+                                            totalTasksCount={tasks.length}
                                         />
                                     </div>
                                 )}

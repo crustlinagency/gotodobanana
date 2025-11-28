@@ -1,42 +1,63 @@
+import { Target, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface FocusModeProps {
-    isActive: boolean;
-    onToggle: () => void;
-    filteredTasksCount: number;
+  isActive: boolean;
+  onToggle: () => void;
+  filteredTasksCount: number;
+  totalTasksCount?: number;
 }
 
-export default function FocusMode({ isActive, onToggle, filteredTasksCount }: FocusModeProps) {
+export default function FocusMode({ 
+  isActive, 
+  onToggle, 
+  filteredTasksCount,
+  totalTasksCount = 0 
+}: FocusModeProps) {
+  const hiddenCount = totalTasksCount - filteredTasksCount;
+
+  if (!isActive) {
     return (
-        <Card className={`border-2 transition-all ${isActive ? "border-purple-500 bg-purple-50 dark:bg-purple-950/20" : "border-muted"}`}>
-            <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            {isActive ? (
-                                <Eye className="h-5 w-5 text-purple-600" />
-                            ) : (
-                                <EyeOff className="h-5 w-5 text-muted-foreground" />
-                            )}
-                            <h3 className="font-semibold">Focus Mode</h3>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                            {isActive 
-                                ? `Showing ${filteredTasksCount} high-priority tasks only` 
-                                : "Hide distractions, show only what matters now"}
-                        </p>
-                    </div>
-                    <Button
-                        onClick={onToggle}
-                        variant={isActive ? "default" : "outline"}
-                        className={isActive ? "bg-purple-600 hover:bg-purple-700" : ""}
-                    >
-                        {isActive ? "Exit Focus" : "Activate"}
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onToggle}
+        className="gap-2"
+      >
+        <Target className="h-4 w-4" />
+        Enable Focus Mode
+      </Button>
     );
+  }
+
+  return (
+    <Alert className="border-banana-500 bg-banana-50 dark:bg-banana-950">
+      <Target className="h-4 w-4 text-banana-600" />
+      <AlertDescription className="flex items-center justify-between">
+        <div className="flex-1">
+          <span className="font-semibold text-banana-900 dark:text-banana-100">
+            Focus Mode Active
+          </span>
+          <p className="text-sm text-banana-800 dark:text-banana-200 mt-1">
+            Showing only <strong>High priority</strong> incomplete tasks ({filteredTasksCount} tasks)
+            {hiddenCount > 0 && (
+              <span className="block mt-1 text-banana-700 dark:text-banana-300">
+                ⚠️ {hiddenCount} other task{hiddenCount !== 1 ? 's are' : ' is'} hidden
+              </span>
+            )}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggle}
+          className="gap-2 hover:bg-banana-100 dark:hover:bg-banana-900"
+        >
+          <X className="h-4 w-4" />
+          Disable
+        </Button>
+      </AlertDescription>
+    </Alert>
+  );
 }
