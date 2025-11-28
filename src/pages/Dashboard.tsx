@@ -67,6 +67,7 @@ export default function Dashboard() {
         queryKey: ["tasks", selectedListId, searchQuery, filters],
         queryFn: async () => {
             try {
+                console.log("Fetching tasks...");
                 let result;
                 
                 if (selectedListId) {
@@ -78,6 +79,8 @@ export default function Dashboard() {
                     result = await Task.filter({ deleted: false }, filters.sortBy);
                 }
 
+                console.log("Tasks fetched from database:", result);
+
                 let filteredTasks = result || [];
 
                 // Search filter
@@ -88,6 +91,7 @@ export default function Dashboard() {
                         task.description?.toLowerCase().includes(query) ||
                         task.tags?.some((tag: string) => tag.toLowerCase().includes(query))
                     );
+                    console.log("After search filter:", filteredTasks.length, "tasks");
                 }
 
                 // Priority filter
@@ -95,6 +99,7 @@ export default function Dashboard() {
                     filteredTasks = filteredTasks.filter(
                         (task: any) => task.priority === filters.priority
                     );
+                    console.log("After priority filter:", filteredTasks.length, "tasks");
                 }
 
                 // Status filter
@@ -102,6 +107,7 @@ export default function Dashboard() {
                     filteredTasks = filteredTasks.filter(
                         (task: any) => task.status === filters.status
                     );
+                    console.log("After status filter:", filteredTasks.length, "tasks");
                 }
 
                 // Date range filter
@@ -137,6 +143,7 @@ export default function Dashboard() {
                                 return true;
                         }
                     });
+                    console.log("After date range filter:", filteredTasks.length, "tasks");
                 }
 
                 // Tags filter
@@ -145,6 +152,7 @@ export default function Dashboard() {
                         if (!task.tags || task.tags.length === 0) return false;
                         return filters.tags!.some(tag => task.tags.includes(tag));
                     });
+                    console.log("After tags filter:", filteredTasks.length, "tasks");
                 }
 
                 // Lists filter
@@ -152,8 +160,10 @@ export default function Dashboard() {
                     filteredTasks = filteredTasks.filter((task: any) => {
                         return filters.lists!.includes(task.listId);
                     });
+                    console.log("After lists filter:", filteredTasks.length, "tasks");
                 }
 
+                console.log("Final filtered tasks:", filteredTasks.length, "tasks");
                 return filteredTasks;
             } catch (error) {
                 console.error("Error fetching tasks:", error);

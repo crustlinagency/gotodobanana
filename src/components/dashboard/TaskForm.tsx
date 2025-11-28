@@ -76,9 +76,13 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await Task.create(data);
+      console.log("Creating task with data:", data);
+      const result = await Task.create(data);
+      console.log("Task created successfully:", result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Task creation succeeded, invalidating queries...");
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Task created");
       handleClose();
@@ -132,6 +136,8 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log("Attempting to create task with title:", title);
+
     const taskData = {
       title,
       description,
@@ -142,7 +148,10 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       tags: tags ? tags.split(",").map((t) => t.trim()) : [],
       completed: false,
       order: 0,
+      deleted: false,
     };
+
+    console.log("Task data prepared:", taskData);
 
     if (task) {
       updateTaskMutation.mutate(taskData);
