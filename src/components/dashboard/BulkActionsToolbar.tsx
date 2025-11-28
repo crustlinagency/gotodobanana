@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, FolderInput, CheckCircle, X } from "lucide-react";
+import { Trash2, CheckCircle, X } from "lucide-react";
 import { useLists } from "@/hooks/use-lists";
 
 interface BulkActionsToolbarProps {
@@ -26,6 +26,8 @@ export default function BulkActionsToolbar({
   onClearSelection,
 }: BulkActionsToolbarProps) {
   const { data: lists = [] } = useLists();
+  
+  const validLists = lists.filter((list: any) => list.id && list.id !== "");
 
   if (selectedCount === 0) return null;
 
@@ -59,24 +61,26 @@ export default function BulkActionsToolbar({
             Mark Complete
           </Button>
 
-          <Select onValueChange={onMoveToList}>
-            <SelectTrigger className="w-[180px] h-9">
-              <SelectValue placeholder="Move to list..." />
-            </SelectTrigger>
-            <SelectContent>
-              {lists.map((list: any) => (
-                <SelectItem key={list.id} value={list.id}>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: list.color }}
-                    />
-                    {list.name}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {validLists.length > 0 && (
+            <Select onValueChange={onMoveToList}>
+              <SelectTrigger className="w-[180px] h-9">
+                <SelectValue placeholder="Move to list..." />
+              </SelectTrigger>
+              <SelectContent>
+                {validLists.map((list: any) => (
+                  <SelectItem key={list.id} value={list.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: list.color }}
+                      />
+                      {list.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Button
             variant="destructive"
