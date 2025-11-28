@@ -5,19 +5,16 @@ import { useLists } from "@/hooks/use-lists";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import Sidebar from "@/components/dashboard/Sidebar";
-import StatsWidget from "@/components/dashboard/StatsWidget";
-import FilterBar from "@/components/dashboard/FilterBar";
 import TaskList from "@/components/dashboard/TaskList";
 import TaskForm from "@/components/dashboard/TaskForm";
-import ViewSwitcher from "@/components/dashboard/ViewSwitcher";
+import TaskToolbar from "@/components/dashboard/TaskToolbar";
 import CalendarView from "@/components/dashboard/CalendarView";
 import KanbanView from "@/components/dashboard/KanbanView";
 import TaskGroupView from "@/components/dashboard/TaskGroupView";
-import RecentActivityFeed from "@/components/dashboard/RecentActivityFeed";
 import DailyOverview from "@/components/dashboard/DailyOverview";
-import WeeklyProductivity from "@/components/dashboard/WeeklyProductivity";
 import FocusMode from "@/components/dashboard/FocusMode";
 import TrashView from "@/components/dashboard/TrashView";
+import WidgetsSidebar from "@/components/dashboard/WidgetsSidebar";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Keyboard } from "lucide-react";
 import { toast } from "sonner";
@@ -83,7 +80,6 @@ export default function Dashboard() {
 
                 let filteredTasks = result || [];
 
-                // Search filter
                 if (searchQuery.trim()) {
                     const query = searchQuery.toLowerCase();
                     filteredTasks = filteredTasks.filter((task: any) =>
@@ -91,26 +87,20 @@ export default function Dashboard() {
                         task.description?.toLowerCase().includes(query) ||
                         task.tags?.some((tag: string) => tag.toLowerCase().includes(query))
                     );
-                    console.log("After search filter:", filteredTasks.length, "tasks");
                 }
 
-                // Priority filter
                 if (filters.priority !== "all") {
                     filteredTasks = filteredTasks.filter(
                         (task: any) => task.priority === filters.priority
                     );
-                    console.log("After priority filter:", filteredTasks.length, "tasks");
                 }
 
-                // Status filter
                 if (filters.status !== "all") {
                     filteredTasks = filteredTasks.filter(
                         (task: any) => task.status === filters.status
                     );
-                    console.log("After status filter:", filteredTasks.length, "tasks");
                 }
 
-                // Date range filter
                 if (filters.dateRange) {
                     const now = new Date();
                     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -143,24 +133,19 @@ export default function Dashboard() {
                                 return true;
                         }
                     });
-                    console.log("After date range filter:", filteredTasks.length, "tasks");
                 }
 
-                // Tags filter
                 if (filters.tags && filters.tags.length > 0) {
                     filteredTasks = filteredTasks.filter((task: any) => {
                         if (!task.tags || task.tags.length === 0) return false;
                         return filters.tags!.some(tag => task.tags.includes(tag));
                     });
-                    console.log("After tags filter:", filteredTasks.length, "tasks");
                 }
 
-                // Lists filter
                 if (filters.lists && filters.lists.length > 0) {
                     filteredTasks = filteredTasks.filter((task: any) => {
                         return filters.lists!.includes(task.listId);
                     });
-                    console.log("After lists filter:", filteredTasks.length, "tasks");
                 }
 
                 console.log("Final filtered tasks:", filteredTasks.length, "tasks");
@@ -173,12 +158,9 @@ export default function Dashboard() {
         enabled: !!user && !isTrashSelected,
     });
 
-    // Focus mode: filter to high priority and not completed
     const displayTasks = isFocusMode
         ? tasks.filter((task: any) => task.priority === "High" && !task.completed)
         : tasks;
-
-    console.log("Display tasks after Focus Mode:", displayTasks.length, "tasks (Focus Mode:", isFocusMode, ")");
 
     useEffect(() => {
         if (!userLoading && !user) {
@@ -186,7 +168,6 @@ export default function Dashboard() {
         }
     }, [user, userLoading, navigate]);
 
-    // Keyboard shortcuts
     useKeyboardShortcuts({
         onNewTask: () => {
             handleNewTask();
@@ -234,7 +215,6 @@ export default function Dashboard() {
         return new Date(task.dueDate) < new Date();
     }).length;
 
-    // Extract all unique tags from tasks
     const allTags = tasks.reduce((tags: string[], task: any) => {
         if (task.tags && Array.isArray(task.tags)) {
             return [...tags, ...task.tags];
@@ -291,46 +271,43 @@ export default function Dashboard() {
                 />
 
                 <main className="flex-1 overflow-auto">
-                    <div className="p-6">
-                        {isTrashSelected ? (
+                    {isTrashSelected ? (
+                        <div className="p-6">
                             <TrashView />
-                        ) : (
-                            <>
+                        </div>
+                    ) : (
+                        <div className="flex h-full">
+                            <div className="flex-1 p-6 overflow-auto">
                                 <div className="mb-6">
                                     <div className="flex items-center justify-between mb-2">
-                                        <h1 className="text-3xl font-bold">
-                                            {selectedListId ? "List Tasks" : "All Tasks"}
-                                        </h1>
-                                        <div className="flex items-center gap-2">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button variant="outline" size="icon">
-                                                        <Keyboard className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="max-w-xs">
-                                                    <div className="space-y-2">
-                                                        <p className="font-semibold">Keyboard Shortcuts</p>
-                                                        <div className="space-y-1 text-xs">
-                                                            <div>Ctrl+N - Create task</div>
-                                                            <div>Ctrl+K - Search</div>
-                                                            <div>Ctrl+F - Focus Mode</div>
-                                                        </div>
-                                                    </div>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                            <ViewSwitcher
-                                                currentView={currentView}
-                                                onViewChange={setCurrentView}
-                                            />
+                                        <div>
+                                            <h1 className="text-3xl font-bold">
+                                                {selectedListId ? "List Tasks" : "All Tasks"}
+                                            </h1>
+                                            <p className="text-muted-foreground mt-1">
+                                                {displayTasks.length} {displayTasks.length === 1 ? 'task' : 'tasks'}
+                                            </p>
                                         </div>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button variant="outline" size="icon">
+                                                    <Keyboard className="h-4 w-4" />
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent className="max-w-xs">
+                                                <div className="space-y-2">
+                                                    <p className="font-semibold">Keyboard Shortcuts</p>
+                                                    <div className="space-y-1 text-xs">
+                                                        <div>Ctrl+N - Create task</div>
+                                                        <div>Ctrl+K - Search</div>
+                                                        <div>Ctrl+F - Focus Mode</div>
+                                                    </div>
+                                                </div>
+                                            </TooltipContent>
+                                        </Tooltip>
                                     </div>
-                                    <p className="text-muted-foreground">
-                                        Organize, prioritize, and accomplish your goals
-                                    </p>
                                 </div>
 
-                                {/* Focus Mode Toggle - Show only in list view */}
                                 {currentView === "list" && (
                                     <div className="mb-6">
                                         <FocusMode
@@ -342,34 +319,20 @@ export default function Dashboard() {
                                     </div>
                                 )}
 
-                                {/* Productivity Widgets - Only show in list view */}
-                                {currentView === "list" && (
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                                        <div className="lg:col-span-2 space-y-6">
-                                            <StatsWidget
-                                                totalTasks={tasks.length}
-                                                completedTasks={completedTasks}
-                                                overdueTasks={overdueTasks}
-                                                todayTasks={todayTasks}
-                                            />
-                                            <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
-                                        </div>
-                                        <div className="space-y-6">
-                                            <WeeklyProductivity tasks={tasks} />
-                                            <RecentActivityFeed tasks={tasks} />
-                                        </div>
-                                    </div>
-                                )}
+                                <TaskToolbar
+                                    currentView={currentView}
+                                    onViewChange={setCurrentView}
+                                    onGroupByChange={currentView === "list" ? setGroupBy : undefined}
+                                    onFilterChange={handleFilterChange}
+                                    activeFilters={filters}
+                                    tags={allTags}
+                                    lists={lists}
+                                />
 
                                 {currentView === "list" && (
                                     <>
-                                        <FilterBar 
-                                            onFilterChange={handleFilterChange}
-                                            onGroupByChange={setGroupBy}
-                                            activeFilters={filters}
-                                            tags={allTags}
-                                            lists={lists}
-                                        />
+                                        <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
+                                        
                                         {tasksLoading ? (
                                             <div className="flex items-center justify-center py-16">
                                                 <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
@@ -418,9 +381,21 @@ export default function Dashboard() {
                                         )}
                                     </>
                                 )}
-                            </>
-                        )}
-                    </div>
+                            </div>
+
+                            {currentView === "list" && (
+                                <div className="w-80 border-l bg-muted/30 p-4 overflow-auto">
+                                    <WidgetsSidebar
+                                        totalTasks={tasks.length}
+                                        completedTasks={completedTasks}
+                                        overdueTasks={overdueTasks}
+                                        todayTasks={todayTasks}
+                                        tasks={tasks}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </main>
             </div>
 
