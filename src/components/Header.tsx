@@ -3,10 +3,11 @@ import { User } from "@/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Menu, Moon, Sun } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useTheme } from "@/hooks/use-theme";
 
 export default function Header() {
-    const [isDark, setIsDark] = useState(false);
+    const { isDark, toggleTheme } = useTheme();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const { data: user } = useQuery({
@@ -19,21 +20,6 @@ export default function Header() {
             }
         }
     });
-
-    useEffect(() => {
-        const isDarkMode = document.documentElement.classList.contains("dark");
-        setIsDark(isDarkMode);
-    }, []);
-
-    const toggleDarkMode = () => {
-        const newMode = !isDark;
-        setIsDark(newMode);
-        if (newMode) {
-            document.documentElement.classList.add("dark");
-        } else {
-            document.documentElement.classList.remove("dark");
-        }
-    };
 
     const handleLogin = async () => {
         await User.login();
@@ -65,7 +51,7 @@ export default function Header() {
                             <Link to="/dashboard">
                                 <Button variant="ghost">Dashboard</Button>
                             </Link>
-                            <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
+                            <Button variant="ghost" size="icon" onClick={toggleTheme}>
                                 {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                             </Button>
                             <div className="flex items-center gap-3">
@@ -79,7 +65,7 @@ export default function Header() {
                         </>
                     ) : (
                         <>
-                            <Button variant="ghost" size="icon" onClick={toggleDarkMode}>
+                            <Button variant="ghost" size="icon" onClick={toggleTheme}>
                                 {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                             </Button>
                             <Button onClick={handleLogin} variant="default" className="bg-banana-500 hover:bg-banana-600 text-black">
@@ -111,7 +97,7 @@ export default function Header() {
                                         Dashboard
                                     </Button>
                                 </Link>
-                                <Button variant="ghost" className="justify-start" onClick={toggleDarkMode}>
+                                <Button variant="ghost" className="justify-start" onClick={toggleTheme}>
                                     {isDark ? (
                                         <>
                                             <Sun className="h-5 w-5 mr-2" /> Light Mode
@@ -131,7 +117,7 @@ export default function Header() {
                             </>
                         ) : (
                             <>
-                                <Button variant="ghost" className="justify-start" onClick={toggleDarkMode}>
+                                <Button variant="ghost" className="justify-start" onClick={toggleTheme}>
                                     {isDark ? (
                                         <>
                                             <Sun className="h-5 w-5 mr-2" /> Light Mode
