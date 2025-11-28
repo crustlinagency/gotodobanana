@@ -1,0 +1,26 @@
+{
+  "name": "List",
+  "description": "A list or project containing tasks",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the list"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the list"
+    },
+    "color": {
+      "type": "string",
+      "description": "Color code for the list (hex format)"
+    },
+    "archived": {
+      "type": "boolean",
+      "description": "Whether the list is archived"
+    },
+    "order": {
+      "type": "number",
+      "description": "Order position for sorting"
+    }
+  }
+}

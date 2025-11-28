@@ -1,0 +1,53 @@
+{
+  "name": "Task",
+  "description": "A task or todo item with rich details",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "The title of the task"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the task (supports rich text)"
+    },
+    "priority": {
+      "type": "string",
+      "description": "Priority level: High, Medium, or Low"
+    },
+    "dueDate": {
+      "type": "string",
+      "description": "Due date for the task"
+    },
+    "startDate": {
+      "type": "string",
+      "description": "Start date for the task"
+    },
+    "status": {
+      "type": "string",
+      "description": "Current status: todo, in-progress, or completed"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of tag names"
+    },
+    "listId": {
+      "type": "string",
+      "description": "ID of the list this task belongs to"
+    },
+    "completed": {
+      "type": "boolean",
+      "description": "Whether the task is completed"
+    },
+    "completedAt": {
+      "type": "string",
+      "description": "Timestamp when task was completed"
+    },
+    "order": {
+      "type": "number",
+      "description": "Order position for drag-and-drop sorting"
+    }
+  }
+}
