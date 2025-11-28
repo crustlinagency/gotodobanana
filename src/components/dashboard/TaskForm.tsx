@@ -38,7 +38,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
   const [priority, setPriority] = useState("Medium");
   const [status, setStatus] = useState("todo");
   const [dueDate, setDueDate] = useState<Date | undefined>();
-  const [listId, setListId] = useState(defaultListId || "");
+  const [listId, setListId] = useState(defaultListId || "none");
   const [tags, setTags] = useState("");
 
   const queryClient = useQueryClient();
@@ -58,7 +58,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       setPriority(task.priority || "Medium");
       setStatus(task.status || "todo");
       setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
-      setListId(task.listId || "");
+      setListId(task.listId || "none");
       setTags(task.tags ? task.tags.join(", ") : "");
     } else {
       setTitle("");
@@ -66,7 +66,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       setPriority("Medium");
       setStatus("todo");
       setDueDate(undefined);
-      setListId(defaultListId || "");
+      setListId(defaultListId || "none");
       setTags("");
     }
   }, [task, defaultListId]);
@@ -100,7 +100,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       priority,
       status,
       dueDate: dueDate ? dueDate.toISOString() : null,
-      listId: listId || null,
+      listId: listId === "none" ? null : listId,
       tags: tags ? tags.split(",").map((t) => t.trim()) : [],
       completed: false,
       order: 0,
@@ -119,7 +119,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     setPriority("Medium");
     setStatus("todo");
     setDueDate(undefined);
-    setListId(defaultListId || "");
+    setListId(defaultListId || "none");
     setTags("");
     onClose();
   };
@@ -222,7 +222,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
                       <SelectValue placeholder="Select list" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No List</SelectItem>
+                      <SelectItem value="none">No List</SelectItem>
                       {lists.map((list) => (
                         <SelectItem key={list.id} value={list.id}>
                           {list.name}
