@@ -35,8 +35,8 @@ export default function Header() {
             <div className="container flex h-16 items-center justify-between">
                 <Link to="/" className="flex items-center gap-2">
                     <img
-                        src="https://ellprnxjjzatijdxcogk.supabase.co/storage/v1/object/public/files/chat-generated-images/project-x3quk5sxm0hbi1h6kufdz/a59ed40e-46b9-49c6-ba5b-9c1d232290de.png"
-                        alt="GoTodoBanana logo"
+                        src="https://ellprnxjjzatijdxcogk.supabase.co/storage/v1/object/public/files/chat-generated-images/project-x3quk5sxm0hbi1h6kufdz/79262c9a-96af-41bf-977d-38e233cda655.png"
+                        alt="GoTodoBanana logo - banana icon"
                         className="h-10 w-10"
                     />
                     <span className="text-xl font-bold bg-gradient-to-r from-banana-600 to-grape-600 bg-clip-text text-transparent">

@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { User, Task } from "@/entities";
 import { useLists } from "@/hooks/use-lists";
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import Sidebar from "@/components/dashboard/Sidebar";
 import StatsWidget from "@/components/dashboard/StatsWidget";
@@ -13,8 +14,18 @@ import CalendarView from "@/components/dashboard/CalendarView";
 import KanbanView from "@/components/dashboard/KanbanView";
 import TaskGroupView from "@/components/dashboard/TaskGroupView";
 import RecentActivityFeed from "@/components/dashboard/RecentActivityFeed";
+import DailyOverview from "@/components/dashboard/DailyOverview";
+import WeeklyProductivity from "@/components/dashboard/WeeklyProductivity";
+import FocusMode from "@/components/dashboard/FocusMode";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Keyboard } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 export default function Dashboard() {
     const [selectedListId, setSelectedListId] = useState<string | null>(null);
@@ -23,6 +34,8 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [currentView, setCurrentView] = useState<"list" | "calendar" | "kanban">("list");
     const [groupBy, setGroupBy] = useState<"none" | "list" | "priority" | "dueDate" | "status">("none");
+    const [isFocusMode, setIsFocusMode] = useState(false);
+    const searchInputRef = useRef<HTMLInputElement>(null);
     const [filters, setFilters] = useState({
         priority: "all",
         status: "all",
@@ -146,11 +159,35 @@ export default function Dashboard() {
         enabled: !!user,
     });
 
+    // Focus mode: filter to high priority and not completed
+    const displayTasks = isFocusMode
+        ? tasks.filter((task: any) => task.priority === "High" && !task.completed)
+        : tasks;
+
     useEffect(() => {
         if (!userLoading && !user) {
             User.login();
         }
     }, [user, userLoading, navigate]);
+
+    // Keyboard shortcuts
+    useKeyboardShortcuts({
+        onNewTask: () => {
+            handleNewTask();
+            toast.success("New task dialog opened (Ctrl+N)");
+        },
+        onSearch: () => {
+            const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
+            if (searchInput) {
+                searchInput.focus();
+                toast.success("Search activated (Ctrl+K)");
+            }
+        },
+        onToggleFocus: () => {
+            setIsFocusMode(prev => !prev);
+            toast.success(isFocusMode ? "Focus Mode disabled (Ctrl+F)" : "Focus Mode enabled (Ctrl+F)");
+        },
+    });
 
     if (userLoading) {
         return (
@@ -207,6 +244,10 @@ export default function Dashboard() {
         handleEditTask(task);
     };
 
+    const handleToggleFocusMode = () => {
+        setIsFocusMode(prev => !prev);
+    };
+
     return (
         <div className="h-screen flex flex-col overflow-hidden">
             <DashboardHeader 
@@ -228,26 +269,66 @@ export default function Dashboard() {
                                 <h1 className="text-3xl font-bold">
                                     {selectedListId ? "List Tasks" : "All Tasks"}
                                 </h1>
-                                <ViewSwitcher
-                                    currentView={currentView}
-                                    onViewChange={setCurrentView}
-                                />
+                                <div className="flex items-center gap-2">
+                                    <HoverCard>
+                                        <HoverCardTrigger asChild>
+                                            <Button variant="outline" size="icon">
+                                                <Keyboard className="h-4 w-4" />
+                                            </Button>
+                                        </HoverCardTrigger>
+                                        <HoverCardContent className="w-80">
+                                            <div className="space-y-2">
+                                                <h4 className="font-semibold">Keyboard Shortcuts</h4>
+                                                <div className="space-y-1 text-sm">
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Create task</span>
+                                                        <kbd className="px-2 py-1 bg-muted rounded">Ctrl+N</kbd>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Search</span>
+                                                        <kbd className="px-2 py-1 bg-muted rounded">Ctrl+K</kbd>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-muted-foreground">Focus Mode</span>
+                                                        <kbd className="px-2 py-1 bg-muted rounded">Ctrl+F</kbd>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </HoverCardContent>
+                                    </HoverCard>
+                                    <ViewSwitcher
+                                        currentView={currentView}
+                                        onViewChange={setCurrentView}
+                                    />
+                                </div>
                             </div>
                             <p className="text-muted-foreground">
                                 Organize, prioritize, and accomplish your goals
                             </p>
                         </div>
 
+                        {/* Focus Mode Toggle */}
+                        <div className="mb-6">
+                            <FocusMode
+                                isActive={isFocusMode}
+                                onToggle={handleToggleFocusMode}
+                                filteredTasksCount={displayTasks.length}
+                            />
+                        </div>
+
+                        {/* Productivity Widgets */}
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                            <div className="lg:col-span-2">
+                            <div className="lg:col-span-2 space-y-6">
                                 <StatsWidget
                                     totalTasks={tasks.length}
                                     completedTasks={completedTasks}
                                     overdueTasks={overdueTasks}
                                     todayTasks={todayTasks}
                                 />
+                                <DailyOverview tasks={tasks} onTaskClick={handleEditTask} />
                             </div>
-                            <div>
+                            <div className="space-y-6">
+                                <WeeklyProductivity tasks={tasks} />
                                 <RecentActivityFeed tasks={tasks} />
                             </div>
                         </div>
@@ -267,13 +348,13 @@ export default function Dashboard() {
                                     </div>
                                 ) : groupBy !== "none" ? (
                                     <TaskGroupView
-                                        tasks={tasks}
+                                        tasks={displayTasks}
                                         groupBy={groupBy}
                                         onEditTask={handleEditTask}
                                         lists={lists}
                                     />
                                 ) : (
-                                    <TaskList tasks={tasks} onEditTask={handleEditTask} />
+                                    <TaskList tasks={displayTasks} onEditTask={handleEditTask} />
                                 )}
                             </>
                         )}
@@ -286,7 +367,7 @@ export default function Dashboard() {
                                     </div>
                                 ) : (
                                     <CalendarView
-                                        tasks={tasks}
+                                        tasks={displayTasks}
                                         onEditTask={handleEditTask}
                                         onNewTask={handleNewTask}
                                     />
@@ -302,7 +383,7 @@ export default function Dashboard() {
                                     </div>
                                 ) : (
                                     <KanbanView
-                                        tasks={tasks}
+                                        tasks={displayTasks}
                                         onEditTask={handleEditTask}
                                         onNewTask={handleNewTask}
                                     />
