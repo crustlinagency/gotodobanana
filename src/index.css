@@ -1,8 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Import Syncfusion styles */
+/* Import Syncfusion styles FIRST - @import must come before all other statements */
 @import "@syncfusion/ej2-base/styles/material.css";
 @import "@syncfusion/ej2-buttons/styles/material.css";
 @import "@syncfusion/ej2-inputs/styles/material.css";
@@ -12,6 +8,10 @@
 @import "@syncfusion/ej2-splitbuttons/styles/material.css";
 @import "@syncfusion/ej2-dropdowns/styles/material.css";
 @import "@syncfusion/ej2-richtexteditor/styles/material.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   :root {
