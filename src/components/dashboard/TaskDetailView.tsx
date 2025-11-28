@@ -178,15 +178,6 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
                             <Button onClick={onEdit} variant="outline">
                                 Edit Task
                             </Button>
-                            <Button 
-                                onClick={() => setShowDeleteDialog(true)} 
-                                variant="outline"
-                                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                                disabled={softDeleteMutation.isPending}
-                            >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                            </Button>
                         </div>
                     </DialogHeader>
 
@@ -221,6 +212,20 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
                             <TaskComments taskId={task.id} />
                         </TabsContent>
                     </Tabs>
+
+                    <Separator />
+
+                    <div className="flex justify-end pt-2">
+                        <Button 
+                            onClick={() => setShowDeleteDialog(true)} 
+                            variant="destructive"
+                            className="gap-2"
+                            disabled={softDeleteMutation.isPending}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete Task
+                        </Button>
+                    </div>
                 </DialogContent>
             </Dialog>
 
