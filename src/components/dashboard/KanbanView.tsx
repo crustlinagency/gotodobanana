@@ -1,5 +1,5 @@
 import KanbanColumn from "./KanbanColumn";
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -19,6 +19,21 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
 
     const updateTaskMutation = useMutation({
         mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
+            // CRITICAL: Verify task ownership before update
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const existingTask = await Task.filter({ 
+                id: taskId, 
+                created_by: user.email 
+            });
+
+            if (!existingTask || existingTask.length === 0) {
+                throw new Error("Task not found or access denied");
+            }
+
             await Task.update(taskId, {
                 status,
                 completed: status === "completed",
@@ -29,9 +44,9 @@ export default function KanbanView({ tasks, onEditTask, onNewTask }: KanbanViewP
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
             toast.success("Task moved successfully");
         },
-        onError: (error) => {
+        onError: (error: any) => {
             console.error("Error updating task:", error);
-            toast.error("Failed to move task");
+            toast.error(error.message || "Failed to move task");
         },
     });
 

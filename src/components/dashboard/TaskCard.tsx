@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Edit, Trash2, Tag, MoreVertical, GripVertical, ExternalLink, ChevronDown, ChevronUp, Pencil, Repeat } from "lucide-react";
 import { format } from "date-fns";
@@ -45,6 +45,21 @@ export default function TaskCard({
 
   const toggleCompleteMutation = useMutation({
     mutationFn: async () => {
+      // CRITICAL: Verify task ownership before update
+      const user = await User.me();
+      if (!user?.email) {
+        throw new Error("Not authenticated");
+      }
+
+      const existingTask = await Task.filter({ 
+        id: task.id, 
+        created_by: user.email 
+      });
+
+      if (!existingTask || existingTask.length === 0) {
+        throw new Error("Task not found or access denied");
+      }
+
       const newCompletedState = !task.completed;
       
       await Task.update(task.id, {
@@ -113,10 +128,29 @@ export default function TaskCard({
       }
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
+    onError: (error: any) => {
+      console.error("Error toggling task:", error);
+      toast.error(error.message || "Failed to update task");
+    },
   });
 
   const softDeleteMutation = useMutation({
     mutationFn: async () => {
+      // CRITICAL: Verify task ownership before delete
+      const user = await User.me();
+      if (!user?.email) {
+        throw new Error("Not authenticated");
+      }
+
+      const existingTask = await Task.filter({ 
+        id: task.id, 
+        created_by: user.email 
+      });
+
+      if (!existingTask || existingTask.length === 0) {
+        throw new Error("Task not found or access denied");
+      }
+
       await Task.update(task.id, {
         deleted: true,
         deletedAt: new Date().toISOString(),
@@ -125,6 +159,10 @@ export default function TaskCard({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Task moved to trash");
+    },
+    onError: (error: any) => {
+      console.error("Error deleting task:", error);
+      toast.error(error.message || "Failed to delete task");
     },
   });
 

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, Clock, Flag, CheckCircle2, Circle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
@@ -30,6 +30,22 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
             if (!task?.id) {
                 throw new Error("Task not found");
             }
+
+            // CRITICAL: Verify task ownership before update
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const existingTask = await Task.filter({ 
+                id: task.id, 
+                created_by: user.email 
+            });
+
+            if (!existingTask || existingTask.length === 0) {
+                throw new Error("Task not found or access denied");
+            }
+
             await Task.update(task.id, {
                 completed: !task.completed,
                 completedAt: !task.completed ? new Date().toISOString() : null,
@@ -42,7 +58,7 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
         },
         onError: (error: any) => {
             console.error("Error toggling task:", error);
-            toast.error("Failed to update task. It may have been deleted.");
+            toast.error(error.message || "Failed to update task");
             onClose();
         },
     });
@@ -52,6 +68,22 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
             if (!task?.id) {
                 throw new Error("Task not found");
             }
+
+            // CRITICAL: Verify task ownership before delete
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const existingTask = await Task.filter({ 
+                id: task.id, 
+                created_by: user.email 
+            });
+
+            if (!existingTask || existingTask.length === 0) {
+                throw new Error("Task not found or access denied");
+            }
+
             await Task.update(task.id, {
                 deleted: true,
                 deletedAt: new Date().toISOString(),
@@ -65,7 +97,7 @@ export default function TaskDetailView({ task, open, onClose, onEdit }: TaskDeta
         },
         onError: (error: any) => {
             console.error("Error deleting task:", error);
-            toast.error("Failed to delete task. It may have already been removed.");
+            toast.error(error.message || "Failed to delete task");
             setShowDeleteDialog(false);
             onClose();
         },

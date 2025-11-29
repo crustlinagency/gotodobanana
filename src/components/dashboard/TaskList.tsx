@@ -1,7 +1,7 @@
 import TaskCard from "./TaskCard";
 import BulkActionsToolbar from "./BulkActionsToolbar";
 import { AlertCircle } from "lucide-react";
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -22,19 +22,52 @@ export default function TaskList({ tasks, onEditTask }: TaskListProps) {
 
   const reorderTasksMutation = useMutation({
     mutationFn: async ({ taskId, newOrder }: { taskId: string; newOrder: number }) => {
+      // CRITICAL: Verify task ownership before reorder
+      const user = await User.me();
+      if (!user?.email) {
+        throw new Error("Not authenticated");
+      }
+
+      const existingTask = await Task.filter({ 
+        id: taskId, 
+        created_by: user.email 
+      });
+
+      if (!existingTask || existingTask.length === 0) {
+        throw new Error("Task not found or access denied");
+      }
+
       await Task.update(taskId, { order: newOrder });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error reordering tasks:", error);
-      toast.error("Failed to reorder tasks");
+      toast.error(error.message || "Failed to reorder tasks");
     },
   });
 
   const bulkDeleteMutation = useMutation({
     mutationFn: async (taskIds: string[]) => {
+      // CRITICAL: Verify all tasks belong to user before bulk delete
+      const user = await User.me();
+      if (!user?.email) {
+        throw new Error("Not authenticated");
+      }
+
+      // Verify each task belongs to this user
+      for (const taskId of taskIds) {
+        const existingTask = await Task.filter({ 
+          id: taskId, 
+          created_by: user.email 
+        });
+
+        if (!existingTask || existingTask.length === 0) {
+          throw new Error(`Task ${taskId} not found or access denied`);
+        }
+      }
+
       await Task.batch().delete(taskIds);
     },
     onSuccess: () => {
@@ -43,14 +76,32 @@ export default function TaskList({ tasks, onEditTask }: TaskListProps) {
       setShowSelection(false);
       toast.success("Tasks deleted successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error deleting tasks:", error);
-      toast.error("Failed to delete tasks");
+      toast.error(error.message || "Failed to delete tasks");
     },
   });
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async (updates: Array<{ id: string; data: any }>) => {
+      // CRITICAL: Verify all tasks belong to user before bulk update
+      const user = await User.me();
+      if (!user?.email) {
+        throw new Error("Not authenticated");
+      }
+
+      // Verify each task belongs to this user
+      for (const update of updates) {
+        const existingTask = await Task.filter({ 
+          id: update.id, 
+          created_by: user.email 
+        });
+
+        if (!existingTask || existingTask.length === 0) {
+          throw new Error(`Task ${update.id} not found or access denied`);
+        }
+      }
+
       await Task.batch().update(updates);
     },
     onSuccess: () => {
@@ -59,9 +110,9 @@ export default function TaskList({ tasks, onEditTask }: TaskListProps) {
       setShowSelection(false);
       toast.success("Tasks updated successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error updating tasks:", error);
-      toast.error("Failed to update tasks");
+      toast.error(error.message || "Failed to update tasks");
     },
   });
 

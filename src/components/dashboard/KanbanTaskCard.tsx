@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Tag, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { getTaskPreview } from "@/lib/html-utils";
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -21,6 +21,21 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
 
     const softDeleteMutation = useMutation({
         mutationFn: async () => {
+            // CRITICAL: Verify task ownership before delete
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const existingTask = await Task.filter({ 
+                id: task.id, 
+                created_by: user.email 
+            });
+
+            if (!existingTask || existingTask.length === 0) {
+                throw new Error("Task not found or access denied");
+            }
+
             await Task.update(task.id, {
                 deleted: true,
                 deletedAt: new Date().toISOString(),
@@ -29,6 +44,10 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
             toast.success("Task moved to trash");
+        },
+        onError: (error: any) => {
+            console.error("Error deleting task:", error);
+            toast.error(error.message || "Failed to delete task");
         },
     });
 

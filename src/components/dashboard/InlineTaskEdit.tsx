@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -17,6 +17,21 @@ export default function InlineTaskEdit({ task, onCancel }: InlineTaskEditProps) 
 
   const updateTaskMutation = useMutation({
     mutationFn: async (newTitle: string) => {
+      // CRITICAL: Verify task ownership before update
+      const user = await User.me();
+      if (!user?.email) {
+        throw new Error("Not authenticated");
+      }
+
+      const existingTask = await Task.filter({ 
+        id: task.id, 
+        created_by: user.email 
+      });
+
+      if (!existingTask || existingTask.length === 0) {
+        throw new Error("Task not found or access denied");
+      }
+
       await Task.update(task.id, { title: newTitle });
     },
     onSuccess: () => {
@@ -24,8 +39,10 @@ export default function InlineTaskEdit({ task, onCancel }: InlineTaskEditProps) 
       toast.success("Task updated");
       onCancel();
     },
-    onError: () => {
-      toast.error("Failed to update task");
+    onError: (error: any) => {
+      console.error("Error updating task:", error);
+      toast.error(error.message || "Failed to update task");
+      onCancel();
     },
   });
 
