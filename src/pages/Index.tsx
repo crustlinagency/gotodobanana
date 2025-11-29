@@ -1,32 +1,25 @@
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import Hero from "@/components/landing/Hero";
+import Features from "@/components/landing/Features";
+import Pricing from "@/components/landing/Pricing";
+import UseCases from "@/components/landing/UseCases";
+import FAQ from "@/components/landing/FAQ";
+import CallToAction from "@/components/landing/CallToAction";
+
 export default function Index() {
-    console.log("Index page is rendering!");
-    
     return (
-        <div style={{ 
-            minHeight: '100vh', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            flexDirection: 'column',
-            gap: '20px',
-            backgroundColor: '#ffffff',
-            color: '#000000',
-            padding: '20px'
-        }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 'bold' }}>
-                GoTodoBanana Test Page
-            </h1>
-            <p style={{ fontSize: '18px' }}>
-                If you can see this, the app is loading correctly!
-            </p>
-            <div style={{ 
-                padding: '20px', 
-                backgroundColor: '#FFD93D', 
-                borderRadius: '8px',
-                color: '#000000'
-            }}>
-                Test Component Rendered Successfully ✓
-            </div>
+        <div className="min-h-screen flex flex-col">
+            <Header />
+            <main className="flex-1">
+                <Hero />
+                <Features />
+                <UseCases />
+                <Pricing />
+                <FAQ />
+                <CallToAction />
+            </main>
+            <Footer />
         </div>
     );
 }
