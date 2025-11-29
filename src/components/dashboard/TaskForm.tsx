@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Task, List } from "@/entities";
+import { Task, List, User } from "@/entities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
@@ -56,8 +56,27 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
   const { data: lists = [] } = useQuery({
     queryKey: ["lists"],
     queryFn: async () => {
-      const result = await List.filter({ archived: false }, "-created_at");
-      return result || [];
+      try {
+        // CRITICAL: Filter lists by current user
+        const user = await User.me();
+        if (!user?.email) {
+          console.error("No authenticated user found");
+          return [];
+        }
+
+        console.log("Fetching lists for task form for user:", user.email);
+        
+        const result = await List.filter({ 
+          archived: false,
+          created_by: user.email // CRITICAL: Filter by current user
+        }, "-created_at");
+        
+        console.log(`Found ${result?.length || 0} lists for user`);
+        return result || [];
+      } catch (error) {
+        console.error("Error fetching lists:", error);
+        return [];
+      }
     },
   });
 
@@ -140,6 +159,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
       toast.success("Task moved to trash");
       setShowDeleteDialog(false);
       handleClose();
