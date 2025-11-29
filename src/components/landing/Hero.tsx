@@ -24,14 +24,14 @@ export default function Hero() {
                             ✨ Free Forever Plan Available
                         </Badge>
                         
-                        <h1 className="text-4xl md:text-6xl font-bold leading-tight text-foreground">
+                        <h1 className="text-4xl md:text-6xl font-bold leading-tight text-gray-900 dark:text-white">
                             Organize Your Life,{" "}
-                            <span className="bg-gradient-to-r from-banana-600 to-grape-600 bg-clip-text text-transparent">
+                            <span className="bg-gradient-to-r from-banana-600 to-grape-600 dark:from-banana-400 dark:to-grape-400 bg-clip-text text-transparent">
                                 Visually
                             </span>
                         </h1>
                         
-                        <p className="text-lg md:text-xl text-foreground/80 dark:text-foreground/90">
+                        <p className="text-lg md:text-xl text-gray-700 dark:text-gray-100">
                             The powerful yet simple TODO app that makes task management actually enjoyable. 
                             Beautiful design meets advanced features like Kanban boards, calendar views, and smart priorities.
                         </p>
@@ -44,7 +44,7 @@ export default function Hero() {
                             >
                                 Get Started Free
                             </Button>
-                            <Button variant="outline" size="lg" className="group">
+                            <Button variant="outline" size="lg" className="group dark:border-gray-600 dark:text-white dark:hover:bg-white/10">
                                 <Play className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
                                 Watch Demo
                             </Button>
@@ -56,25 +56,25 @@ export default function Hero() {
                                 <div className="h-8 w-8 rounded-lg bg-banana-100 dark:bg-banana-900/30 flex items-center justify-center">
                                     <CheckCircle2 className="h-4 w-4 text-banana-600 dark:text-banana-400" />
                                 </div>
-                                <span className="text-sm font-medium text-foreground">Drag & Drop</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">Drag & Drop</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="h-8 w-8 rounded-lg bg-banana-100 dark:bg-banana-900/30 flex items-center justify-center">
                                     <Calendar className="h-4 w-4 text-banana-600 dark:text-banana-400" />
                                 </div>
-                                <span className="text-sm font-medium text-foreground">Calendar Sync</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">Calendar Sync</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="h-8 w-8 rounded-lg bg-banana-100 dark:bg-banana-900/30 flex items-center justify-center">
                                     <Tags className="h-4 w-4 text-banana-600 dark:text-banana-400" />
                                 </div>
-                                <span className="text-sm font-medium text-foreground">Smart Tags</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">Smart Tags</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="h-8 w-8 rounded-lg bg-banana-100 dark:bg-banana-900/30 flex items-center justify-center">
                                     <Zap className="h-4 w-4 text-banana-600 dark:text-banana-400" />
                                 </div>
-                                <span className="text-sm font-medium text-foreground">Focus Mode</span>
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">Focus Mode</span>
                             </div>
                         </div>
                     </div>
@@ -95,8 +95,8 @@ export default function Hero() {
                                     ✓
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-bold text-foreground">247</div>
-                                    <div className="text-xs text-muted-foreground">Tasks completed this week</div>
+                                    <div className="text-2xl font-bold text-gray-900 dark:text-white">247</div>
+                                    <div className="text-xs text-gray-600 dark:text-gray-400">Tasks completed this week</div>
                                 </div>
                             </div>
                         </div>
