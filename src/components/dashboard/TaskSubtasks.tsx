@@ -39,8 +39,12 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
                 }
 
                 console.log("✅ SECURITY: Task ownership verified, fetching subtasks");
-                const result = await Subtask.filter({ parentTaskId: taskId }, "order");
-                console.log(`✅ SECURITY: Found ${result?.length || 0} subtasks`);
+                // CRITICAL: Also filter subtasks by created_by for defense in depth
+                const result = await Subtask.filter({ 
+                    parentTaskId: taskId,
+                    created_by: user.email 
+                }, "order");
+                console.log(`✅ SECURITY: Found ${result?.length || 0} subtasks for user ${user.email}`);
                 return result || [];
             } catch (error) {
                 console.error("❌ SECURITY: Error fetching subtasks:", error);
@@ -72,6 +76,21 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
 
     const toggleSubtaskMutation = useMutation({
         mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
+            // CRITICAL: Verify subtask ownership before update
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const existingSubtask = await Subtask.filter({ 
+                id, 
+                created_by: user.email 
+            });
+
+            if (!existingSubtask || existingSubtask.length === 0) {
+                throw new Error("Subtask not found or access denied");
+            }
+
             await Subtask.update(id, {
                 completed: !completed,
                 completedAt: !completed ? new Date().toISOString() : null,
@@ -80,19 +99,38 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
         },
+        onError: (error: any) => {
+            console.error("Error toggling subtask:", error);
+            toast.error(error.message || "Failed to update subtask");
+        },
     });
 
     const deleteSubtaskMutation = useMutation({
         mutationFn: async (id: string) => {
+            // CRITICAL: Verify subtask ownership before delete
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const existingSubtask = await Subtask.filter({ 
+                id, 
+                created_by: user.email 
+            });
+
+            if (!existingSubtask || existingSubtask.length === 0) {
+                throw new Error("Subtask not found or access denied");
+            }
+
             await Subtask.delete(id);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
             toast.success("Subtask deleted");
         },
-        onError: (error) => {
+        onError: (error: any) => {
             console.error("Error deleting subtask:", error);
-            toast.error("Failed to delete subtask");
+            toast.error(error.message || "Failed to delete subtask");
         },
     });
 

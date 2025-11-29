@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface TaskCommentsProps {
@@ -44,8 +44,12 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                 }
 
                 console.log("✅ SECURITY: Task ownership verified, fetching comments");
-                const result = await Comment.filter({ taskId }, "-created_at");
-                console.log(`✅ SECURITY: Found ${result?.length || 0} comments`);
+                // CRITICAL: Also filter comments by created_by for defense in depth
+                const result = await Comment.filter({ 
+                    taskId,
+                    created_by: user.email 
+                }, "-created_at");
+                console.log(`✅ SECURITY: Found ${result?.length || 0} comments for user ${user.email}`);
                 return result || [];
             } catch (error) {
                 console.error("❌ SECURITY: Error fetching comments:", error);
@@ -70,6 +74,35 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
         onError: (error) => {
             console.error("Error adding comment:", error);
             toast.error("Failed to add comment");
+        },
+    });
+
+    const deleteCommentMutation = useMutation({
+        mutationFn: async (commentId: string) => {
+            // CRITICAL: Verify comment ownership before delete
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const existingComment = await Comment.filter({ 
+                id: commentId, 
+                created_by: user.email 
+            });
+
+            if (!existingComment || existingComment.length === 0) {
+                throw new Error("Comment not found or access denied");
+            }
+
+            await Comment.delete(commentId);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["comments", taskId] });
+            toast.success("Comment deleted");
+        },
+        onError: (error: any) => {
+            console.error("Error deleting comment:", error);
+            toast.error(error.message || "Failed to delete comment");
         },
     });
 
@@ -101,7 +134,7 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                     </p>
                 ) : (
                     comments.map((comment: any) => (
-                        <div key={comment.id} className="flex gap-3 p-3 rounded-lg bg-muted/30">
+                        <div key={comment.id} className="flex gap-3 p-3 rounded-lg bg-muted/30 group">
                             <Avatar className="h-8 w-8">
                                 <AvatarFallback className="text-xs bg-banana-500 text-black">
                                     {getInitials(comment.created_by || "U")}
@@ -120,6 +153,20 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
                                 </div>
                                 <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
                             </div>
+                            {user?.email === comment.created_by && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive"
+                                    onClick={() => {
+                                        if (confirm("Delete this comment?")) {
+                                            deleteCommentMutation.mutate(comment.id);
+                                        }
+                                    }}
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                </Button>
+                            )}
                         </div>
                     ))
                 )}

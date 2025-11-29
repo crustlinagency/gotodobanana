@@ -37,8 +37,12 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
                 }
 
                 console.log("✅ SECURITY: Task ownership verified, fetching attachments");
-                const result = await Attachment.filter({ taskId }, "-created_at");
-                console.log(`✅ SECURITY: Found ${result?.length || 0} attachments`);
+                // CRITICAL: Also filter attachments by created_by for defense in depth
+                const result = await Attachment.filter({ 
+                    taskId,
+                    created_by: user.email 
+                }, "-created_at");
+                console.log(`✅ SECURITY: Found ${result?.length || 0} attachments for user ${user.email}`);
                 return result || [];
             } catch (error) {
                 console.error("❌ SECURITY: Error fetching attachments:", error);
@@ -49,15 +53,30 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
 
     const deleteAttachmentMutation = useMutation({
         mutationFn: async (attachmentId: string) => {
+            // CRITICAL: Verify attachment ownership before delete
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const existingAttachment = await Attachment.filter({ 
+                id: attachmentId, 
+                created_by: user.email 
+            });
+
+            if (!existingAttachment || existingAttachment.length === 0) {
+                throw new Error("Attachment not found or access denied");
+            }
+
             await Attachment.delete(attachmentId);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["attachments", taskId] });
             toast.success("Attachment deleted");
         },
-        onError: (error) => {
+        onError: (error: any) => {
             console.error("Error deleting attachment:", error);
-            toast.error("Failed to delete attachment");
+            toast.error(error.message || "Failed to delete attachment");
         },
     });
 
