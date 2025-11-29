@@ -25,6 +25,7 @@ import RichTextEditor from "./RichTextEditor";
 import TaskComments from "./TaskComments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
+import RecurrenceSettings from "./RecurrenceSettings";
 import { toast } from "sonner";
 
 interface TaskFormProps {
@@ -43,6 +44,12 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
   const [listId, setListId] = useState(defaultListId || "none");
   const [tags, setTags] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState("weekly");
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [recurrenceDays, setRecurrenceDays] = useState<string[]>([]);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
 
   const queryClient = useQueryClient();
 
@@ -63,6 +70,12 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
       setListId(task.listId || "none");
       setTags(task.tags ? task.tags.join(", ") : "");
+      
+      setIsRecurring(task.isRecurring || false);
+      setRecurrencePattern(task.recurrencePattern || "weekly");
+      setRecurrenceInterval(task.recurrenceInterval || 1);
+      setRecurrenceDays(task.recurrenceDays || []);
+      setRecurrenceEndDate(task.recurrenceEndDate ? new Date(task.recurrenceEndDate) : undefined);
     } else {
       setTitle("");
       setDescription("");
@@ -71,6 +84,12 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       setDueDate(undefined);
       setListId(defaultListId || "none");
       setTags("");
+      
+      setIsRecurring(false);
+      setRecurrencePattern("weekly");
+      setRecurrenceInterval(1);
+      setRecurrenceDays([]);
+      setRecurrenceEndDate(undefined);
     }
   }, [task, defaultListId]);
 
@@ -149,6 +168,12 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
       completed: false,
       order: 0,
       deleted: false,
+      isRecurring,
+      recurrencePattern: isRecurring ? recurrencePattern : null,
+      recurrenceInterval: isRecurring ? recurrenceInterval : null,
+      recurrenceDays: isRecurring && recurrencePattern === 'weekly' ? recurrenceDays : [],
+      recurrenceEndDate: isRecurring && recurrenceEndDate ? recurrenceEndDate.toISOString() : null,
+      parentRecurringTaskId: null,
     };
 
     console.log("Task data prepared:", taskData);
@@ -168,6 +193,11 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     setDueDate(undefined);
     setListId(defaultListId || "none");
     setTags("");
+    setIsRecurring(false);
+    setRecurrencePattern("weekly");
+    setRecurrenceInterval(1);
+    setRecurrenceDays([]);
+    setRecurrenceEndDate(undefined);
     setShowDeleteDialog(false);
     onClose();
   };
@@ -303,6 +333,19 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
                     placeholder="work, urgent, personal"
                   />
                 </div>
+
+                <RecurrenceSettings
+                  isRecurring={isRecurring}
+                  onIsRecurringChange={setIsRecurring}
+                  pattern={recurrencePattern}
+                  onPatternChange={setRecurrencePattern}
+                  interval={recurrenceInterval}
+                  onIntervalChange={setRecurrenceInterval}
+                  days={recurrenceDays}
+                  onDaysChange={setRecurrenceDays}
+                  endDate={recurrenceEndDate}
+                  onEndDateChange={setRecurrenceEndDate}
+                />
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={handleClose}>

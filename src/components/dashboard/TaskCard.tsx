@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Edit, Trash2, Tag, MoreVertical, GripVertical, ExternalLink, ChevronDown, ChevronUp, Pencil } from "lucide-react";
+import { Calendar, Edit, Trash2, Tag, MoreVertical, GripVertical, ExternalLink, ChevronDown, ChevronUp, Pencil, Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import {
@@ -18,6 +18,7 @@ import CompletionCelebration from "./CompletionCelebration";
 import InlineTaskEdit from "./InlineTaskEdit";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
 import { toast } from "sonner";
+import { calculateNextOccurrence, formatRecurrenceDescription } from "@/lib/recurrence-utils";
 
 interface TaskCardProps {
   task: any;
@@ -52,15 +53,59 @@ export default function TaskCard({
         status: newCompletedState ? "completed" : task.status || "todo",
       });
       
+      if (newCompletedState && task.isRecurring) {
+        const nextDate = calculateNextOccurrence(
+          task.dueDate ? new Date(task.dueDate) : new Date(),
+          {
+            pattern: task.recurrencePattern,
+            interval: task.recurrenceInterval,
+            days: task.recurrenceDays,
+            endDate: task.recurrenceEndDate,
+          }
+        );
+
+        if (nextDate) {
+          await Task.create({
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            status: "todo",
+            dueDate: nextDate.toISOString(),
+            listId: task.listId,
+            tags: task.tags || [],
+            completed: false,
+            order: task.order,
+            deleted: false,
+            isRecurring: true,
+            recurrencePattern: task.recurrencePattern,
+            recurrenceInterval: task.recurrenceInterval,
+            recurrenceDays: task.recurrenceDays || [],
+            recurrenceEndDate: task.recurrenceEndDate,
+            parentRecurringTaskId: task.parentRecurringTaskId || task.id,
+          });
+          
+          console.log("Created next recurring task instance for:", nextDate);
+        } else {
+          console.log("Recurring series has ended");
+        }
+      }
+      
       return newCompletedState;
     },
     onSuccess: (wasCompleted) => {
       if (wasCompleted) {
         setIsCompleting(true);
         setShowCelebration(true);
-        toast.success("Task completed! 🎉", {
-          description: task.title,
-        });
+        
+        if (task.isRecurring) {
+          toast.success("Task completed! Next instance created 🔄", {
+            description: task.title,
+          });
+        } else {
+          toast.success("Task completed! 🎉", {
+            description: task.title,
+          });
+        }
         
         setTimeout(() => {
           setIsCompleting(false);
@@ -100,6 +145,14 @@ export default function TaskCard({
     task.dueDate &&
     !task.completed &&
     new Date(task.dueDate) < new Date();
+
+  const recurrenceDescription = task.isRecurring
+    ? formatRecurrenceDescription({
+        pattern: task.recurrencePattern,
+        interval: task.recurrenceInterval,
+        days: task.recurrenceDays,
+      })
+    : null;
 
   return (
     <>
@@ -153,6 +206,12 @@ export default function TaskCard({
                     >
                       {task.title}
                     </h3>
+                    {task.isRecurring && (
+                      <Badge variant="outline" className="flex items-center gap-1 text-xs">
+                        <Repeat className="h-3 w-3" />
+                        Recurring
+                      </Badge>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -166,7 +225,7 @@ export default function TaskCard({
               </div>
 
               <div className="flex items-center gap-1 flex-shrink-0">
-                {(task.description || task.tags?.length > 0) && (
+                {(task.description || task.tags?.length > 0 || task.isRecurring) && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -236,6 +295,13 @@ export default function TaskCard({
 
             {isExpanded && (
               <div className="space-y-2 pt-2 border-t animate-slide-up">
+                {task.isRecurring && recurrenceDescription && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Repeat className="h-4 w-4" />
+                    <span>{recurrenceDescription}</span>
+                  </div>
+                )}
+                
                 {task.description && (
                   <div 
                     className="text-sm text-muted-foreground prose prose-sm max-w-none"
