@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { FilterPreset } from "@/entities";
+import { FilterPreset, User } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Save, BookmarkPlus, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -38,7 +38,21 @@ export default function FilterPresetManager({
     queryKey: ["filter-presets"],
     queryFn: async () => {
       try {
-        return await FilterPreset.list("-created_at");
+        // CRITICAL: Filter presets by current user
+        const user = await User.me();
+        if (!user?.email) {
+          console.error("No authenticated user found");
+          return [];
+        }
+
+        console.log("Fetching filter presets for user:", user.email);
+        
+        const result = await FilterPreset.filter({ 
+          created_by: user.email // CRITICAL: Filter by current user
+        }, "-created_at");
+        
+        console.log(`Found ${result?.length || 0} filter presets for user`);
+        return result || [];
       } catch (error) {
         console.error("Error fetching presets:", error);
         return [];

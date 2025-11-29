@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Comment, User } from "@/entities";
+import { Comment, Task, User } from "@/entities";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -25,6 +25,25 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
         queryKey: ["comments", taskId],
         queryFn: async () => {
             try {
+                // CRITICAL: Verify user owns the task before loading comments
+                const user = await User.me();
+                if (!user?.email) {
+                    console.error("No authenticated user found");
+                    return [];
+                }
+
+                // First verify the task belongs to this user
+                const tasks = await Task.filter({ 
+                    id: taskId,
+                    created_by: user.email 
+                });
+                
+                if (!tasks || tasks.length === 0) {
+                    console.error("Task not found or access denied");
+                    return [];
+                }
+
+                // Now load comments for this verified task
                 const result = await Comment.filter({ taskId }, "-created_at");
                 return result || [];
             } catch (error) {
@@ -36,6 +55,21 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
 
     const addCommentMutation = useMutation({
         mutationFn: async (content: string) => {
+            // Verify ownership before adding comment
+            const user = await User.me();
+            if (!user?.email) {
+                throw new Error("Not authenticated");
+            }
+
+            const tasks = await Task.filter({ 
+                id: taskId,
+                created_by: user.email 
+            });
+            
+            if (!tasks || tasks.length === 0) {
+                throw new Error("Access denied");
+            }
+
             await Comment.create({
                 taskId,
                 content,
@@ -47,9 +81,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
             setNewComment("");
             toast.success("Comment added");
         },
-        onError: (error) => {
+        onError: (error: any) => {
             console.error("Error adding comment:", error);
-            toast.error("Failed to add comment");
+            toast.error(error.message || "Failed to add comment");
         },
     });
 
