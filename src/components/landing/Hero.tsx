@@ -24,14 +24,14 @@ export default function Hero() {
                             ✨ Free Forever Plan Available
                         </Badge>
                         
-                        <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+                        <h1 className="text-4xl md:text-6xl font-bold leading-tight text-foreground">
                             Organize Your Life,{" "}
                             <span className="bg-gradient-to-r from-banana-600 to-grape-600 bg-clip-text text-transparent">
                                 Visually
                             </span>
                         </h1>
                         
-                        <p className="text-lg md:text-xl text-muted-foreground">
+                        <p className="text-lg md:text-xl text-foreground/80 dark:text-foreground/90">
                             The powerful yet simple TODO app that makes task management actually enjoyable. 
                             Beautiful design meets advanced features like Kanban boards, calendar views, and smart priorities.
                         </p>
@@ -54,27 +54,27 @@ export default function Hero() {
                         <div className="grid grid-cols-2 gap-4 pt-6">
                             <div className="flex items-center gap-2">
                                 <div className="h-8 w-8 rounded-lg bg-banana-100 dark:bg-banana-900/30 flex items-center justify-center">
-                                    <CheckCircle2 className="h-4 w-4 text-banana-600" />
+                                    <CheckCircle2 className="h-4 w-4 text-banana-600 dark:text-banana-400" />
                                 </div>
-                                <span className="text-sm font-medium">Drag & Drop</span>
+                                <span className="text-sm font-medium text-foreground">Drag & Drop</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="h-8 w-8 rounded-lg bg-banana-100 dark:bg-banana-900/30 flex items-center justify-center">
-                                    <Calendar className="h-4 w-4 text-banana-600" />
+                                    <Calendar className="h-4 w-4 text-banana-600 dark:text-banana-400" />
                                 </div>
-                                <span className="text-sm font-medium">Calendar Sync</span>
+                                <span className="text-sm font-medium text-foreground">Calendar Sync</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="h-8 w-8 rounded-lg bg-banana-100 dark:bg-banana-900/30 flex items-center justify-center">
-                                    <Tags className="h-4 w-4 text-banana-600" />
+                                    <Tags className="h-4 w-4 text-banana-600 dark:text-banana-400" />
                                 </div>
-                                <span className="text-sm font-medium">Smart Tags</span>
+                                <span className="text-sm font-medium text-foreground">Smart Tags</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <div className="h-8 w-8 rounded-lg bg-banana-100 dark:bg-banana-900/30 flex items-center justify-center">
-                                    <Zap className="h-4 w-4 text-banana-600" />
+                                    <Zap className="h-4 w-4 text-banana-600 dark:text-banana-400" />
                                 </div>
-                                <span className="text-sm font-medium">Focus Mode</span>
+                                <span className="text-sm font-medium text-foreground">Focus Mode</span>
                             </div>
                         </div>
                     </div>
@@ -95,7 +95,7 @@ export default function Hero() {
                                     ✓
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-bold">247</div>
+                                    <div className="text-2xl font-bold text-foreground">247</div>
                                     <div className="text-xs text-muted-foreground">Tasks completed this week</div>
                                 </div>
                             </div>
