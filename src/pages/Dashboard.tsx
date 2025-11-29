@@ -328,7 +328,7 @@ export default function Dashboard() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute left-0 top-4 z-10 h-8 w-8 rounded-r-md rounded-l-none border-r border-t border-b bg-background shadow-sm hover:bg-accent"
+                            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-r-md rounded-l-none border-r border-t border-b bg-background shadow-sm hover:bg-accent transition-all"
                             style={{ left: isLeftSidebarOpen ? "256px" : "0" }}
                             onClick={() => setIsLeftSidebarOpen(!isLeftSidebarOpen)}
                         >
@@ -494,7 +494,7 @@ export default function Dashboard() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="absolute right-0 top-4 z-10 h-8 w-8 rounded-l-md rounded-r-none border-l border-t border-b bg-background shadow-sm hover:bg-accent"
+                                            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-l-md rounded-r-none border-l border-t border-b bg-background shadow-sm hover:bg-accent transition-all"
                                             style={{ right: isRightSidebarOpen ? "320px" : "0" }}
                                             onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
                                         >
