@@ -35,9 +35,9 @@ export default function Pricing() {
         },
         {
             name: "Premium",
-            price: billingPeriod === "monthly" ? "$10" : "$96",
+            price: billingPeriod === "monthly" ? "$10" : "$100",
             period: billingPeriod === "monthly" ? "/month" : "/year",
-            savings: billingPeriod === "yearly" ? "Save $24/year" : null,
+            savings: billingPeriod === "yearly" ? "Save $20/year" : null,
             description: "For power users who need more",
             features: [
                 "Everything in Free, plus:",
