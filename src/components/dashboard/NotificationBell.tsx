@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { Button } from "@/components/ui/button";
 import {
     Popover,
@@ -19,7 +19,17 @@ export default function NotificationBell({ onTaskClick }: NotificationBellProps)
         queryKey: ["tasks"],
         queryFn: async () => {
             try {
-                const result = await Task.filter({ deleted: false }, "-created_at");
+                const user = await User.me();
+                if (!user?.email) {
+                    console.error("No authenticated user found");
+                    return [];
+                }
+
+                const result = await Task.filter({ 
+                    deleted: false,
+                    created_by: user.email // CRITICAL: Filter by current user
+                }, "-created_at");
+                
                 return result || [];
             } catch (error) {
                 console.error("Error fetching tasks:", error);

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/hooks/use-user";
 import StatsCards from "@/components/analytics/StatsCards";
 import CompletionTrendChart from "@/components/analytics/CompletionTrendChart";
 import PriorityDistributionChart from "@/components/analytics/PriorityDistributionChart";
@@ -12,24 +13,24 @@ import { subDays, format, differenceInDays } from "date-fns";
 
 export default function Analytics() {
     const navigate = useNavigate();
-
-    const { data: user, isLoading: userLoading } = useQuery({
-        queryKey: ["user"],
-        queryFn: async () => {
-            try {
-                return await User.me();
-            } catch (error) {
-                console.error("Auth error:", error);
-                return null;
-            }
-        },
-    });
+    const { data: user, isLoading: userLoading } = useUser();
 
     const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-        queryKey: ["tasks"],
+        queryKey: ["tasks", user?.email],
         queryFn: async () => {
             try {
-                const result = await Task.list("-created_at");
+                if (!user?.email) {
+                    console.error("No authenticated user");
+                    return [];
+                }
+
+                console.log("Fetching analytics for user:", user.email);
+                
+                const result = await Task.filter({ 
+                    created_by: user.email // CRITICAL: Filter by current user
+                }, "-created_at");
+                
+                console.log(`Found ${result?.length || 0} tasks for analytics`);
                 return result || [];
             } catch (error) {
                 console.error("Error fetching tasks:", error);

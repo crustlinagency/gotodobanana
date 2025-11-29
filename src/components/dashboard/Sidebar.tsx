@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { List, Task } from "@/entities";
+import { List, Task, User } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Inbox, Trash2, BarChart3 } from "lucide-react";
 import { useState } from "react";
@@ -31,9 +31,19 @@ export default function Sidebar({
     queryKey: ["lists"],
     queryFn: async () => {
       try {
-        console.log("Fetching lists...");
-        const result = await List.filter({ archived: false }, "-created_at");
-        console.log("Lists fetched:", result);
+        const user = await User.me();
+        if (!user?.email) {
+          console.error("No authenticated user found");
+          return [];
+        }
+
+        console.log("Fetching lists for user:", user.email);
+        const result = await List.filter({ 
+          archived: false,
+          created_by: user.email // CRITICAL: Filter by current user
+        }, "-created_at");
+        
+        console.log(`Found ${result?.length || 0} lists`);
         return result || [];
       } catch (error) {
         console.error("Error fetching lists:", error);
@@ -46,7 +56,17 @@ export default function Sidebar({
     queryKey: ["deletedTasksCount"],
     queryFn: async () => {
       try {
-        const result = await Task.filter({ deleted: true });
+        const user = await User.me();
+        if (!user?.email) {
+          console.error("No authenticated user found");
+          return 0;
+        }
+
+        const result = await Task.filter({ 
+          deleted: true,
+          created_by: user.email // CRITICAL: Filter by current user
+        });
+        
         return result?.length || 0;
       } catch (error) {
         console.error("Error fetching deleted tasks count:", error);

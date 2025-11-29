@@ -1,4 +1,4 @@
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,26 @@ export default function TrashView() {
     const { data: deletedTasks = [], isLoading } = useQuery({
         queryKey: ["deletedTasks"],
         queryFn: async () => {
-            const result = await Task.filter({ deleted: true }, "-deletedAt");
-            return result || [];
+            try {
+                const user = await User.me();
+                if (!user?.email) {
+                    console.error("No authenticated user found");
+                    return [];
+                }
+
+                console.log("Fetching deleted tasks for user:", user.email);
+                
+                const result = await Task.filter({ 
+                    deleted: true,
+                    created_by: user.email // CRITICAL: Filter by current user
+                }, "-deletedAt");
+                
+                console.log(`Found ${result?.length || 0} deleted tasks`);
+                return result || [];
+            } catch (error) {
+                console.error("Error fetching deleted tasks:", error);
+                return [];
+            }
         },
     });
 
@@ -32,6 +50,7 @@ export default function TrashView() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
+            queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
             toast.success("Task restored successfully");
         },
     });
@@ -42,6 +61,7 @@ export default function TrashView() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
+            queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
             toast.success("Task permanently deleted");
         },
     });
@@ -53,6 +73,7 @@ export default function TrashView() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
+            queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
             toast.success("Trash emptied");
         },
     });

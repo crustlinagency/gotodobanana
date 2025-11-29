@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { User, Task } from "@/entities";
 import { useLists } from "@/hooks/use-lists";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { useUser } from "@/hooks/use-user";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TaskList from "@/components/dashboard/TaskList";
@@ -57,6 +58,7 @@ export default function Dashboard() {
 
     const navigate = useNavigate();
     const { data: lists = [] } = useLists();
+    const { data: user, isLoading: userLoading } = useUser();
 
     useEffect(() => {
         localStorage.setItem("leftSidebarOpen", JSON.stringify(isLeftSidebarOpen));
@@ -66,35 +68,32 @@ export default function Dashboard() {
         localStorage.setItem("rightSidebarOpen", JSON.stringify(isRightSidebarOpen));
     }, [isRightSidebarOpen]);
 
-    const { data: user, isLoading: userLoading } = useQuery({
-        queryKey: ["user"],
-        queryFn: async () => {
-            try {
-                return await User.me();
-            } catch (error) {
-                console.error("Auth error:", error);
-                return null;
-            }
-        },
-    });
-
     const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-        queryKey: ["tasks", selectedListId, searchQuery, filters],
+        queryKey: ["tasks", selectedListId, searchQuery, filters, user?.email],
         queryFn: async () => {
             try {
-                console.log("Fetching tasks...");
+                if (!user?.email) {
+                    console.error("No authenticated user");
+                    return [];
+                }
+
+                console.log("Fetching tasks for user:", user.email);
                 let result;
                 
                 if (selectedListId) {
                     result = await Task.filter({ 
                         listId: selectedListId,
-                        deleted: false 
+                        deleted: false,
+                        created_by: user.email // CRITICAL: Filter by current user
                     }, filters.sortBy);
                 } else {
-                    result = await Task.filter({ deleted: false }, filters.sortBy);
+                    result = await Task.filter({ 
+                        deleted: false,
+                        created_by: user.email // CRITICAL: Filter by current user
+                    }, filters.sortBy);
                 }
 
-                console.log("Tasks fetched from database:", result);
+                console.log("Tasks fetched from database:", result?.length || 0);
 
                 let filteredTasks = result || [];
 

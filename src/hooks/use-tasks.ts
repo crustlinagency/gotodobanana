@@ -1,4 +1,4 @@
-import { Task } from "@/entities";
+import { Task, User } from "@/entities";
 import { useQuery } from "@tanstack/react-query";
 
 export function useTasks(listId?: string | null, searchQuery?: string) {
@@ -6,12 +6,26 @@ export function useTasks(listId?: string | null, searchQuery?: string) {
     queryKey: ["tasks", listId, searchQuery],
     queryFn: async () => {
       try {
+        // Get current user to filter by their email
+        const user = await User.me();
+        if (!user?.email) {
+          console.error("No authenticated user found");
+          return [];
+        }
+
+        console.log("Fetching tasks for user:", user.email);
+        
         let tasks;
         
         if (listId) {
-          tasks = await Task.filter({ listId }, "-created_at");
+          tasks = await Task.filter({ 
+            listId,
+            created_by: user.email // CRITICAL: Filter by current user
+          }, "-created_at");
         } else {
-          tasks = await Task.list("-created_at");
+          tasks = await Task.filter({ 
+            created_by: user.email // CRITICAL: Filter by current user
+          }, "-created_at");
         }
 
         // Apply search filter
@@ -24,6 +38,7 @@ export function useTasks(listId?: string | null, searchQuery?: string) {
           );
         }
 
+        console.log(`Found ${tasks?.length || 0} tasks for user ${user.email}`);
         return tasks || [];
       } catch (error) {
         console.error("Error fetching tasks:", error);
