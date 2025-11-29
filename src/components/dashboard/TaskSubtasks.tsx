@@ -20,28 +20,30 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
         queryKey: ["subtasks", taskId],
         queryFn: async () => {
             try {
-                // CRITICAL: Verify task belongs to current user before loading subtasks
                 const user = await User.me();
                 if (!user?.email) {
-                    console.error("No authenticated user found");
+                    console.error("❌ SECURITY: No authenticated user");
                     return [];
                 }
 
-                // Verify the task belongs to this user
+                console.log("✅ SECURITY: Verifying task ownership for subtasks, user:", user.email);
+                
                 const taskResult = await Task.filter({ 
                     id: taskId,
                     created_by: user.email 
                 });
                 
                 if (!taskResult || taskResult.length === 0) {
-                    console.error("Task not found or doesn't belong to user");
+                    console.error("❌ SECURITY: Task not found or access denied");
                     return [];
                 }
 
+                console.log("✅ SECURITY: Task ownership verified, fetching subtasks");
                 const result = await Subtask.filter({ parentTaskId: taskId }, "order");
+                console.log(`✅ SECURITY: Found ${result?.length || 0} subtasks`);
                 return result || [];
             } catch (error) {
-                console.error("Error fetching subtasks:", error);
+                console.error("❌ SECURITY: Error fetching subtasks:", error);
                 return [];
             }
         },

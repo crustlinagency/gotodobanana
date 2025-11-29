@@ -38,23 +38,22 @@ export default function FilterPresetManager({
     queryKey: ["filter-presets"],
     queryFn: async () => {
       try {
-        // CRITICAL: Filter presets by current user
         const user = await User.me();
         if (!user?.email) {
-          console.error("No authenticated user found");
+          console.error("❌ SECURITY: No authenticated user");
           return [];
         }
 
-        console.log("Fetching filter presets for user:", user.email);
+        console.log("✅ SECURITY: Fetching filter presets for:", user.email);
         
         const result = await FilterPreset.filter({ 
-          created_by: user.email // CRITICAL: Filter by current user
+          created_by: user.email
         }, "-created_at");
         
-        console.log(`Found ${result?.length || 0} filter presets`);
+        console.log(`✅ SECURITY: Found ${result?.length || 0} filter presets for ${user.email}`);
         return result || [];
       } catch (error) {
-        console.error("Error fetching presets:", error);
+        console.error("❌ SECURITY: Error fetching presets:", error);
         return [];
       }
     },
