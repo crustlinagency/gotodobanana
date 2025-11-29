@@ -51,7 +51,7 @@ export default function FilterPresetManager({
           created_by: user.email // CRITICAL: Filter by current user
         }, "-created_at");
         
-        console.log(`Found ${result?.length || 0} filter presets for user`);
+        console.log(`Found ${result?.length || 0} filter presets`);
         return result || [];
       } catch (error) {
         console.error("Error fetching presets:", error);

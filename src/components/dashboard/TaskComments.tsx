@@ -25,25 +25,24 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
         queryKey: ["comments", taskId],
         queryFn: async () => {
             try {
-                // CRITICAL: Verify user owns the task before loading comments
+                // CRITICAL: Verify task belongs to current user before loading comments
                 const user = await User.me();
                 if (!user?.email) {
                     console.error("No authenticated user found");
                     return [];
                 }
 
-                // First verify the task belongs to this user
-                const tasks = await Task.filter({ 
+                // Verify the task belongs to this user
+                const taskResult = await Task.filter({ 
                     id: taskId,
                     created_by: user.email 
                 });
                 
-                if (!tasks || tasks.length === 0) {
-                    console.error("Task not found or access denied");
+                if (!taskResult || taskResult.length === 0) {
+                    console.error("Task not found or doesn't belong to user");
                     return [];
                 }
 
-                // Now load comments for this verified task
                 const result = await Comment.filter({ taskId }, "-created_at");
                 return result || [];
             } catch (error) {
@@ -55,21 +54,6 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
 
     const addCommentMutation = useMutation({
         mutationFn: async (content: string) => {
-            // Verify ownership before adding comment
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
-
-            const tasks = await Task.filter({ 
-                id: taskId,
-                created_by: user.email 
-            });
-            
-            if (!tasks || tasks.length === 0) {
-                throw new Error("Access denied");
-            }
-
             await Comment.create({
                 taskId,
                 content,
@@ -81,9 +65,9 @@ export default function TaskComments({ taskId }: TaskCommentsProps) {
             setNewComment("");
             toast.success("Comment added");
         },
-        onError: (error: any) => {
+        onError: (error) => {
             console.error("Error adding comment:", error);
-            toast.error(error.message || "Failed to add comment");
+            toast.error("Failed to add comment");
         },
     });
 

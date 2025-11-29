@@ -20,25 +20,24 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
         queryKey: ["subtasks", taskId],
         queryFn: async () => {
             try {
-                // CRITICAL: Verify user owns the task before loading subtasks
+                // CRITICAL: Verify task belongs to current user before loading subtasks
                 const user = await User.me();
                 if (!user?.email) {
                     console.error("No authenticated user found");
                     return [];
                 }
 
-                // First verify the task belongs to this user
-                const tasks = await Task.filter({ 
+                // Verify the task belongs to this user
+                const taskResult = await Task.filter({ 
                     id: taskId,
                     created_by: user.email 
                 });
                 
-                if (!tasks || tasks.length === 0) {
-                    console.error("Task not found or access denied");
+                if (!taskResult || taskResult.length === 0) {
+                    console.error("Task not found or doesn't belong to user");
                     return [];
                 }
 
-                // Now load subtasks for this verified task
                 const result = await Subtask.filter({ parentTaskId: taskId }, "order");
                 return result || [];
             } catch (error) {
@@ -50,21 +49,6 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
 
     const createSubtaskMutation = useMutation({
         mutationFn: async (title: string) => {
-            // Verify ownership before creating subtask
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
-
-            const tasks = await Task.filter({ 
-                id: taskId,
-                created_by: user.email 
-            });
-            
-            if (!tasks || tasks.length === 0) {
-                throw new Error("Access denied");
-            }
-
             await Subtask.create({
                 parentTaskId: taskId,
                 title,
@@ -78,29 +62,14 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
             setIsAdding(false);
             toast.success("Subtask added");
         },
-        onError: (error: any) => {
+        onError: (error) => {
             console.error("Error creating subtask:", error);
-            toast.error(error.message || "Failed to add subtask");
+            toast.error("Failed to add subtask");
         },
     });
 
     const toggleSubtaskMutation = useMutation({
         mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
-            // Verify ownership before toggling
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
-
-            const tasks = await Task.filter({ 
-                id: taskId,
-                created_by: user.email 
-            });
-            
-            if (!tasks || tasks.length === 0) {
-                throw new Error("Access denied");
-            }
-
             await Subtask.update(id, {
                 completed: !completed,
                 completedAt: !completed ? new Date().toISOString() : null,
@@ -109,38 +78,19 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
         },
-        onError: (error: any) => {
-            console.error("Error toggling subtask:", error);
-            toast.error(error.message || "Failed to update subtask");
-        },
     });
 
     const deleteSubtaskMutation = useMutation({
         mutationFn: async (id: string) => {
-            // Verify ownership before deleting
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
-
-            const tasks = await Task.filter({ 
-                id: taskId,
-                created_by: user.email 
-            });
-            
-            if (!tasks || tasks.length === 0) {
-                throw new Error("Access denied");
-            }
-
             await Subtask.delete(id);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
             toast.success("Subtask deleted");
         },
-        onError: (error: any) => {
+        onError: (error) => {
             console.error("Error deleting subtask:", error);
-            toast.error(error.message || "Failed to delete subtask");
+            toast.error("Failed to delete subtask");
         },
     });
 

@@ -18,25 +18,24 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
         queryKey: ["attachments", taskId],
         queryFn: async () => {
             try {
-                // CRITICAL: Verify user owns the task before loading attachments
+                // CRITICAL: Verify task belongs to current user before loading attachments
                 const user = await User.me();
                 if (!user?.email) {
                     console.error("No authenticated user found");
                     return [];
                 }
 
-                // First verify the task belongs to this user
-                const tasks = await Task.filter({ 
+                // Verify the task belongs to this user
+                const taskResult = await Task.filter({ 
                     id: taskId,
                     created_by: user.email 
                 });
                 
-                if (!tasks || tasks.length === 0) {
-                    console.error("Task not found or access denied");
+                if (!taskResult || taskResult.length === 0) {
+                    console.error("Task not found or doesn't belong to user");
                     return [];
                 }
 
-                // Now load attachments for this verified task
                 const result = await Attachment.filter({ taskId }, "-created_at");
                 return result || [];
             } catch (error) {
@@ -48,30 +47,15 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
 
     const deleteAttachmentMutation = useMutation({
         mutationFn: async (attachmentId: string) => {
-            // Verify ownership before deleting
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
-
-            const tasks = await Task.filter({ 
-                id: taskId,
-                created_by: user.email 
-            });
-            
-            if (!tasks || tasks.length === 0) {
-                throw new Error("Access denied");
-            }
-
             await Attachment.delete(attachmentId);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["attachments", taskId] });
             toast.success("Attachment deleted");
         },
-        onError: (error: any) {
+        onError: (error) => {
             console.error("Error deleting attachment:", error);
-            toast.error(error.message || "Failed to delete attachment");
+            toast.error("Failed to delete attachment");
         },
     });
 
@@ -81,22 +65,6 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
 
         try {
             setUploading(true);
-            
-            // Verify ownership before uploading
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
-
-            const tasks = await Task.filter({ 
-                id: taskId,
-                created_by: user.email 
-            });
-            
-            if (!tasks || tasks.length === 0) {
-                throw new Error("Access denied");
-            }
-
             const { file_url } = await uploadFile({ file });
 
             await Attachment.create({
@@ -109,9 +77,9 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
 
             queryClient.invalidateQueries({ queryKey: ["attachments", taskId] });
             toast.success("File uploaded successfully");
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error uploading file:", error);
-            toast.error(error.message || "Failed to upload file");
+            toast.error("Failed to upload file");
         } finally {
             setUploading(false);
             e.target.value = "";
