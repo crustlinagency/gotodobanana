@@ -50,24 +50,6 @@ export default function Hero() {
                             </Button>
                         </div>
 
-                        {/* Trust Indicators */}
-                        <div className="flex items-center gap-6 pt-4">
-                            <div className="flex -space-x-2">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div
-                                        key={i}
-                                        className="h-10 w-10 rounded-full bg-gradient-to-br from-banana-200 to-grape-200 border-2 border-background flex items-center justify-center text-xs font-bold"
-                                    >
-                                        {String.fromCharCode(64 + i)}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="text-sm">
-                                <div className="font-semibold">10,000+ users</div>
-                                <div className="text-muted-foreground">Already organized</div>
-                            </div>
-                        </div>
-
                         {/* Quick Features */}
                         <div className="grid grid-cols-2 gap-4 pt-6">
                             <div className="flex items-center gap-2">
@@ -114,7 +96,7 @@ export default function Hero() {
                                 </div>
                                 <div>
                                     <div className="text-2xl font-bold">247</div>
-                                    <div className="text-xs text-muted-foreground">Tasks completed today</div>
+                                    <div className="text-xs text-muted-foreground">Tasks completed this week</div>
                                 </div>
                             </div>
                         </div>

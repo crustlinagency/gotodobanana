@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { User } from "@/entities";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export default function CallToAction() {
     const handleGetStarted = async () => {
@@ -13,15 +13,6 @@ export default function CallToAction() {
             
             <div className="container relative z-10">
                 <div className="max-w-3xl mx-auto text-center space-y-8">
-                    <div className="inline-block">
-                        <div className="bg-white dark:bg-gray-900 px-4 py-2 rounded-full shadow-lg">
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-banana-600" />
-                                <span className="text-sm font-medium">Join 10,000+ productive users</span>
-                            </div>
-                        </div>
-                    </div>
-
                     <h2 className="text-4xl md:text-6xl font-bold leading-tight">
                         Ready to{" "}
                         <span className="bg-gradient-to-r from-banana-600 to-grape-600 bg-clip-text text-transparent">
@@ -53,7 +44,7 @@ export default function CallToAction() {
                         </Button>
                     </div>
 
-                    <div className="flex items-center justify-center gap-8 pt-8 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center justify-center gap-8 pt-8 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-green-500" />
                             <span>No credit card required</span>
