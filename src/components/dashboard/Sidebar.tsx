@@ -1,7 +1,7 @@
 import { useLists } from "@/hooks/use-lists";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Inbox, Trash2, FolderOpen, BarChart3, Settings, Shield, Loader2 } from "lucide-react";
+import { Plus, Inbox, Trash2, FolderOpen, BarChart3, Settings, Shield, Loader2, X } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -16,6 +16,7 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
+import DeleteConfirmDialog from "./DeleteConfirmDialog";
 
 interface SidebarProps {
   selectedListId: string | null;
@@ -34,6 +35,8 @@ export default function Sidebar({
   const [isNewListDialogOpen, setIsNewListDialogOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [newListDescription, setNewListDescription] = useState("");
+  const [listToDelete, setListToDelete] = useState<any>(null);
+  const [hoveredListId, setHoveredListId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -94,6 +97,50 @@ export default function Sidebar({
     },
   });
 
+  const deleteListMutation = useMutation({
+    mutationFn: async (listId: string) => {
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      console.log("✅ SECURITY: Deleting list:", listId);
+      
+      // Archive the list instead of deleting it
+      await List.update(listId, {
+        archived: true,
+      });
+      
+      // Also update any tasks in this list to have no list
+      const { Task } = await import("@/entities");
+      const tasksInList = await Task.filter({ 
+        listId: listId,
+        userId: user.id
+      });
+      
+      if (tasksInList && tasksInList.length > 0) {
+        for (const task of tasksInList) {
+          await Task.update(task.id, { listId: null });
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lists"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("List deleted successfully");
+      setListToDelete(null);
+      
+      // If the deleted list was selected, deselect it
+      if (selectedListId === listToDelete?.id) {
+        onSelectList(null);
+      }
+    },
+    onError: (error: any) => {
+      console.error("❌ Error deleting list:", error);
+      toast.error("Failed to delete list");
+      setListToDelete(null);
+    },
+  });
+
   const handleCreateList = (e: React.FormEvent) => {
     e.preventDefault();
     if (newListName.trim() && !createListMutation.isPending) {
@@ -137,15 +184,35 @@ export default function Sidebar({
             </Button>
 
             {lists.map((list: any) => (
-              <Button
+              <div
                 key={list.id}
-                variant={selectedListId === list.id ? "secondary" : "ghost"}
-                className="w-full justify-start"
-                onClick={() => onSelectList(list.id)}
+                className="relative group"
+                onMouseEnter={() => setHoveredListId(list.id)}
+                onMouseLeave={() => setHoveredListId(null)}
               >
-                <FolderOpen className="h-4 w-4 mr-2" />
-                <span className="truncate">{list.name}</span>
-              </Button>
+                <Button
+                  variant={selectedListId === list.id ? "secondary" : "ghost"}
+                  className="w-full justify-start pr-10"
+                  onClick={() => onSelectList(list.id)}
+                >
+                  <FolderOpen className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">{list.name}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-opacity ${
+                    hoveredListId === list.id ? "opacity-100" : "opacity-0"
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setListToDelete(list);
+                  }}
+                  disabled={deleteListMutation.isPending}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             ))}
 
             <Button
@@ -257,6 +324,18 @@ export default function Sidebar({
           </form>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmDialog
+        open={!!listToDelete}
+        onClose={() => setListToDelete(null)}
+        onConfirm={() => {
+          if (listToDelete) {
+            deleteListMutation.mutate(listToDelete.id);
+          }
+        }}
+        itemName={listToDelete?.name}
+        itemType="list"
+      />
     </>
   );
 }

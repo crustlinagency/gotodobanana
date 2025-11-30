@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ArrowLeft, Save, AlertCircle, Shield, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import GoogleCalendarSync from "@/components/dashboard/GoogleCalendarSync";
 
 export default function Settings() {
     const navigate = useNavigate();
@@ -111,7 +112,7 @@ export default function Settings() {
                     
                     <h1 className="text-3xl font-bold">Settings</h1>
                     <p className="text-muted-foreground mt-2">
-                        Manage your account preferences and privacy settings
+                        Manage your account preferences and integrations
                     </p>
                 </div>
 
@@ -167,6 +168,8 @@ export default function Settings() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    <GoogleCalendarSync />
 
                     <Card>
                         <CardHeader>
