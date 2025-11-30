@@ -32,7 +32,9 @@ export const microsoftOutlook = {
          * Initiate OAuth 2.0 authentication flow with Microsoft
          */
         authenticate: async () => {
+            console.log("[Microsoft Auth] Starting authentication flow");
             const clientId = await getClientId();
+            console.log("[Microsoft Auth] Client ID retrieved");
 
             const authUrl = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
             authUrl.searchParams.append("client_id", clientId);
@@ -42,6 +44,8 @@ export const microsoftOutlook = {
             authUrl.searchParams.append("response_mode", "fragment");
             authUrl.searchParams.append("state", "microsoft_calendar");
 
+            console.log("[Microsoft Auth] Auth URL:", authUrl.toString());
+
             // Open authentication in popup
             const popup = window.open(
                 authUrl.toString(),
@@ -50,31 +54,82 @@ export const microsoftOutlook = {
             );
 
             if (!popup) {
+                console.error("[Microsoft Auth] Popup blocked");
                 throw new Error("Popup blocked. Please allow popups for this site.");
             }
 
+            console.log("[Microsoft Auth] Popup opened, waiting for response");
+
             // Wait for authentication to complete
             return new Promise((resolve, reject) => {
+                let messageReceived = false;
+
+                // Listen for messages from the popup window
+                const messageHandler = (event: MessageEvent) => {
+                    // Verify the message is from our origin
+                    if (event.origin !== window.location.origin) {
+                        console.warn("[Microsoft Auth] Received message from unknown origin:", event.origin);
+                        return;
+                    }
+
+                    console.log("[Microsoft Auth] Received message:", event.data);
+
+                    if (event.data.type === "oauth_success" && event.data.service === "microsoft") {
+                        messageReceived = true;
+                        console.log("✅ [Microsoft Auth] Authentication successful via message");
+                        window.removeEventListener("message", messageHandler);
+                        clearInterval(checkInterval);
+                        clearTimeout(timeout);
+                        resolve({ success: true });
+                    } else if (event.data.type === "oauth_error") {
+                        messageReceived = true;
+                        console.error("[Microsoft Auth] Authentication error via message:", event.data.error, event.data.errorDescription);
+                        window.removeEventListener("message", messageHandler);
+                        clearInterval(checkInterval);
+                        clearTimeout(timeout);
+                        reject(new Error(event.data.errorDescription || event.data.error || "Authentication failed"));
+                    }
+                };
+
+                window.addEventListener("message", messageHandler);
+
+                // Fallback: Check popup closed and localStorage (in case message doesn't work)
                 const checkInterval = setInterval(() => {
                     if (popup.closed) {
+                        console.log("[Microsoft Auth] Popup closed");
                         clearInterval(checkInterval);
-                        // Check if token was stored
-                        const token = localStorage.getItem("microsoft_calendar_token");
-                        if (token) {
-                            resolve({ success: true });
-                        } else {
-                            reject(new Error("Authentication cancelled or failed"));
-                        }
+                        
+                        // Small delay to ensure localStorage is updated
+                        setTimeout(() => {
+                            if (!messageReceived) {
+                                window.removeEventListener("message", messageHandler);
+                                clearTimeout(timeout);
+                                
+                                // Check if token was stored
+                                const token = localStorage.getItem("microsoft_calendar_token");
+                                console.log("[Microsoft Auth] Checking localStorage, token found:", !!token);
+                                
+                                if (token) {
+                                    console.log("✅ [Microsoft Auth] Authentication successful via localStorage");
+                                    resolve({ success: true });
+                                } else {
+                                    console.error("[Microsoft Auth] No token found, authentication cancelled or failed");
+                                    reject(new Error("Authentication cancelled or failed. Please try again."));
+                                }
+                            }
+                        }, 100);
                     }
                 }, 500);
 
                 // Timeout after 5 minutes
-                setTimeout(() => {
+                const timeout = setTimeout(() => {
+                    console.error("[Microsoft Auth] Authentication timeout");
+                    window.removeEventListener("message", messageHandler);
                     clearInterval(checkInterval);
                     if (!popup.closed) {
                         popup.close();
                     }
-                    reject(new Error("Authentication timeout"));
+                    reject(new Error("Authentication timeout. Please try again."));
                 }, 300000);
             });
         },
