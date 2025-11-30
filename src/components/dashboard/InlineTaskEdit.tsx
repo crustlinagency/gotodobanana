@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
 import { Task, User } from "@/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -17,7 +17,6 @@ export default function InlineTaskEdit({ task, onCancel }: InlineTaskEditProps) 
 
   const updateTaskMutation = useMutation({
     mutationFn: async (newTitle: string) => {
-      // CRITICAL: Verify task ownership before update
       const user = await User.me();
       if (!user?.email) {
         throw new Error("Not authenticated");
@@ -71,20 +70,27 @@ export default function InlineTaskEdit({ task, onCancel }: InlineTaskEditProps) 
         className="h-8 text-sm"
         autoFocus
         onBlur={handleSave}
+        disabled={updateTaskMutation.isPending}
       />
       <Button
         size="icon"
         variant="ghost"
         className="h-7 w-7 flex-shrink-0"
         onClick={handleSave}
+        disabled={updateTaskMutation.isPending}
       >
-        <Check className="h-4 w-4 text-green-600" />
+        {updateTaskMutation.isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin text-banana-600" />
+        ) : (
+          <Check className="h-4 w-4 text-green-600" />
+        )}
       </Button>
       <Button
         size="icon"
         variant="ghost"
         className="h-7 w-7 flex-shrink-0"
         onClick={onCancel}
+        disabled={updateTaskMutation.isPending}
       >
         <X className="h-4 w-4 text-red-600" />
       </Button>

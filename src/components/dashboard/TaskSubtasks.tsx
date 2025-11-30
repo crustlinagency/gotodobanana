@@ -47,7 +47,7 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
       console.log("✅ SECURITY: Creating subtask with userId:", user.id);
       return await Subtask.create({
         parentTaskId: taskId,
-        userId: user.id, // CRITICAL: Use userId
+        userId: user.id,
         title,
         completed: false,
         order: subtasks.length,
@@ -107,6 +107,10 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
     );
   }
 
+  const isAnyActionPending = createSubtaskMutation.isPending || 
+                             toggleSubtaskMutation.isPending || 
+                             deleteSubtaskMutation.isPending;
+
   return (
     <div className="space-y-4">
       <form onSubmit={handleSubmit} className="flex gap-2">
@@ -115,6 +119,7 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
           onChange={(e) => setNewSubtaskTitle(e.target.value)}
           placeholder="Add a subtask..."
           className="flex-1"
+          disabled={createSubtaskMutation.isPending}
         />
         <Button
           type="submit"
@@ -149,6 +154,7 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
                     completed: checked as boolean,
                   })
                 }
+                disabled={isAnyActionPending}
               />
               <span
                 className={`flex-1 text-sm ${
@@ -162,8 +168,13 @@ export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
                 size="icon"
                 onClick={() => deleteSubtaskMutation.mutate(subtask.id)}
                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                disabled={isAnyActionPending}
               >
-                <Trash2 className="h-4 w-4" />
+                {deleteSubtaskMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
               </Button>
             </div>
           ))

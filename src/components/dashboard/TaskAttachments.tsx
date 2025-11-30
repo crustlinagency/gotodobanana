@@ -68,7 +68,7 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
       console.log("✅ SECURITY: Creating attachment record with userId:", user.id);
       await Attachment.create({
         taskId,
-        userId: user.id, // CRITICAL: Use userId
+        userId: user.id,
         fileName: file.name,
         fileUrl: file_url,
         fileSize: file.size,
@@ -153,6 +153,7 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
                   size="icon"
                   onClick={() => window.open(attachment.fileUrl, "_blank")}
                   className="h-8 w-8"
+                  disabled={deleteAttachmentMutation.isPending}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -161,8 +162,13 @@ export default function TaskAttachments({ taskId }: TaskAttachmentsProps) {
                   size="icon"
                   onClick={() => deleteAttachmentMutation.mutate(attachment.id)}
                   className="h-8 w-8 text-destructive hover:text-destructive"
+                  disabled={deleteAttachmentMutation.isPending}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {deleteAttachmentMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>

@@ -20,7 +20,7 @@ import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon, Trash2 } from "lucide-react";
+import { CalendarIcon, Trash2, Loader2 } from "lucide-react";
 import RichTextEditor from "./RichTextEditor";
 import TaskComments from "./TaskComments";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,12 +30,13 @@ import { toast } from "sonner";
 
 interface TaskFormProps {
   open: boolean;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   task?: any;
   defaultListId?: string;
+  onSuccess?: () => void;
 }
 
-export default function TaskForm({ open, onClose, task, defaultListId }: TaskFormProps) {
+export default function TaskForm({ open, onOpenChange, task, defaultListId, onSuccess }: TaskFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("Medium");
@@ -57,7 +58,6 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     queryKey: ["lists"],
     queryFn: async () => {
       try {
-        // CRITICAL: Filter lists by current user
         const user = await User.me();
         if (!user?.email) {
           console.error("No authenticated user found");
@@ -68,7 +68,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
         
         const result = await List.filter({ 
           archived: false,
-          created_by: user.email // CRITICAL: Filter by current user
+          created_by: user.email
         }, "-created_at");
         
         console.log(`Found ${result?.length || 0} lists for user`);
@@ -128,7 +128,6 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     onError: (error: any) => {
       console.error("Error creating task:", error);
       toast.error("Failed to create task. Please try again.");
-      // Close dialog on auth errors
       if (error?.message?.includes("auth") || error?.message?.includes("JWT")) {
         handleClose();
       }
@@ -223,10 +222,10 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     setRecurrenceDays([]);
     setRecurrenceEndDate(undefined);
     setShowDeleteDialog(false);
-    onClose();
+    onOpenChange(false);
+    onSuccess?.();
   };
 
-  // Close form if authentication fails
   useEffect(() => {
     if (open) {
       User.me().catch(() => {
@@ -236,9 +235,11 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     }
   }, [open]);
 
+  const isSaving = createTaskMutation.isPending || updateTaskMutation.isPending;
+
   return (
     <>
-      <Dialog open={open} onOpenChange={handleClose}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
@@ -249,6 +250,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
                   size="icon"
                   onClick={() => setShowDeleteDialog(true)}
                   className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  disabled={softDeleteMutation.isPending}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -274,6 +276,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Task title"
                     required
+                    disabled={isSaving}
                   />
                 </div>
 
@@ -289,7 +292,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="priority">Priority</Label>
-                    <Select value={priority} onValueChange={setPriority}>
+                    <Select value={priority} onValueChange={setPriority} disabled={isSaving}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -303,7 +306,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
 
                   <div>
                     <Label htmlFor="status">Status</Label>
-                    <Select value={status} onValueChange={setStatus}>
+                    <Select value={status} onValueChange={setStatus} disabled={isSaving}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -324,6 +327,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
                         <Button
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
+                          disabled={isSaving}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {dueDate ? format(dueDate, "PPP") : "Pick a date"}
@@ -342,7 +346,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
 
                   <div>
                     <Label htmlFor="list">List</Label>
-                    <Select value={listId} onValueChange={setListId}>
+                    <Select value={listId} onValueChange={setListId} disabled={isSaving}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select list" />
                       </SelectTrigger>
@@ -365,6 +369,7 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
                     placeholder="work, urgent, personal"
+                    disabled={isSaving}
                   />
                 </div>
 
@@ -382,15 +387,22 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
                 />
 
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={handleClose}>
+                  <Button type="button" variant="outline" onClick={handleClose} disabled={isSaving}>
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     className="bg-banana-500 hover:bg-banana-600 text-black"
-                    disabled={!title.trim()}
+                    disabled={!title.trim() || isSaving}
                   >
-                    {task ? "Update Task" : "Create Task"}
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {task ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      task ? "Update Task" : "Create Task"
+                    )}
                   </Button>
                 </div>
               </form>

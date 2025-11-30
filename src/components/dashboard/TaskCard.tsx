@@ -197,6 +197,8 @@ export default function TaskCard({
       })
     : null;
 
+  const isActionPending = toggleCompleteMutation.isPending || softDeleteMutation.isPending;
+
   return (
     <>
       <Card 
@@ -214,6 +216,7 @@ export default function TaskCard({
                 onSelectChange?.(checked as boolean);
               }}
               className="mt-1"
+              disabled={isActionPending}
             />
           )}
 
@@ -228,6 +231,7 @@ export default function TaskCard({
               checked={task.completed}
               onCheckedChange={() => toggleCompleteMutation.mutate()}
               className="mt-1"
+              disabled={isActionPending}
             />
           </div>
 
@@ -260,6 +264,7 @@ export default function TaskCard({
                       size="icon"
                       className="h-6 w-6 opacity-0 group-hover:opacity-100 flex-shrink-0"
                       onClick={() => setIsInlineEditing(true)}
+                      disabled={isActionPending}
                     >
                       <Pencil className="h-3 w-3" />
                     </Button>
@@ -274,6 +279,7 @@ export default function TaskCard({
                     size="icon"
                     className="h-8 w-8"
                     onClick={() => setIsExpanded(!isExpanded)}
+                    disabled={isActionPending}
                   >
                     {isExpanded ? (
                       <ChevronUp className="h-4 w-4" />
@@ -285,22 +291,23 @@ export default function TaskCard({
                 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isActionPending}>
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setIsDetailOpen(true)}>
+                    <DropdownMenuItem onClick={() => setIsDetailOpen(true)} disabled={isActionPending}>
                       <ExternalLink className="h-4 w-4 mr-2" />
                       View Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onEdit(task)}>
+                    <DropdownMenuItem onClick={() => onEdit(task)} disabled={isActionPending}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setShowDeleteDialog(true)}
                       className="text-destructive"
+                      disabled={isActionPending}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete

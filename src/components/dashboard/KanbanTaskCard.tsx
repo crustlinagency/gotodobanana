@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Tag, Trash2 } from "lucide-react";
+import { Calendar, Tag, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { getTaskPreview } from "@/lib/html-utils";
 import { Task, User } from "@/entities";
@@ -95,8 +95,13 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
                             e.stopPropagation();
                             setShowDeleteDialog(true);
                         }}
+                        disabled={softDeleteMutation.isPending}
                     >
-                        <Trash2 className="h-3 w-3 text-destructive" />
+                        {softDeleteMutation.isPending ? (
+                            <Loader2 className="h-3 w-3 animate-spin text-destructive" />
+                        ) : (
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                        )}
                     </Button>
                 </div>
 
