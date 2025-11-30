@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Save, AlertCircle, Shield, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import GoogleCalendarSync from "@/components/dashboard/GoogleCalendarSync";
+import OutlookCalendarSync from "@/components/dashboard/OutlookCalendarSync";
 
 export default function Settings() {
     const navigate = useNavigate();
@@ -170,6 +171,8 @@ export default function Settings() {
                     </Card>
 
                     <GoogleCalendarSync />
+
+                    <OutlookCalendarSync />
 
                     <Card>
                         <CardHeader>
