@@ -1,7 +1,7 @@
 // Microsoft Outlook/Office 365 Calendar Integration
 // Uses Microsoft Graph API for calendar operations
 
-import { getMicrosoftConfig } from "@/functions";
+import { getMicrosoftConfig, exchangeMicrosoftCode } from "@/functions";
 
 const REDIRECT_URI = `${window.location.origin}/oauth/callback`;
 const SCOPES = "Calendars.ReadWrite User.Read";
@@ -38,10 +38,10 @@ export const microsoftOutlook = {
 
             const authUrl = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
             authUrl.searchParams.append("client_id", clientId);
-            authUrl.searchParams.append("response_type", "token");
+            authUrl.searchParams.append("response_type", "code"); // Changed from "token" to "code"
             authUrl.searchParams.append("redirect_uri", REDIRECT_URI);
             authUrl.searchParams.append("scope", SCOPES);
-            authUrl.searchParams.append("response_mode", "fragment");
+            authUrl.searchParams.append("response_mode", "query"); // Changed from "fragment" to "query"
             authUrl.searchParams.append("state", "microsoft_calendar");
 
             console.log("[Microsoft Auth] Auth URL:", authUrl.toString());
