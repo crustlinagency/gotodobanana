@@ -2,10 +2,10 @@ import { Link } from "react-router-dom";
 
 export default function Footer() {
     const legalLinks = [
-        { name: "Privacy Policy", url: "https://termify.io/privacy-policy/GULRQObChH" },
-        { name: "Terms of Service", url: "https://termify.io/terms-and-conditions/PreWQOqHNi" },
+        { name: "Privacy Policy", url: "https://termify.io/privacy-policy/GULRQ0bChH" },
+        { name: "Terms of Service", url: "https://termify.io/terms-and-conditions/PreWQOgHNj" },
         { name: "Cookie Policy", url: "https://termify.io/cookie-policy/Zr3WTyfv5u" },
-        { name: "Refund Policy", url: "https://termify.io/return-and-refund/ydQz8/mXFT" },
+        { name: "Refund Policy", url: "https://termify.io/return-and-refund/ydQz87mXFT" },
         { name: "Disclaimer", url: "https://termify.io/disclaimer/1GbEtlasek" },
     ];
 
