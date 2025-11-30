@@ -12,11 +12,11 @@ Deno.serve(async (req) => {
     try {
         console.log("[Exchange Microsoft Code] Function started");
         
-        const { code, redirectUri } = await req.json();
+        const { code, redirectUri, codeVerifier } = await req.json();
         
-        if (!code || !redirectUri) {
+        if (!code || !redirectUri || !codeVerifier) {
             return new Response(
-                JSON.stringify({ error: "Missing code or redirectUri" }),
+                JSON.stringify({ error: "Missing code, redirectUri, or codeVerifier" }),
                 {
                     status: 400,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -38,9 +38,9 @@ Deno.serve(async (req) => {
             );
         }
 
-        console.log("[Exchange Microsoft Code] Exchanging code for token");
+        console.log("[Exchange Microsoft Code] Exchanging code for token with PKCE");
 
-        // Exchange the code for an access token
+        // Exchange the code for an access token with PKCE
         const tokenResponse = await fetch(
             "https://login.microsoftonline.com/common/oauth2/v2.0/token",
             {
@@ -54,6 +54,7 @@ Deno.serve(async (req) => {
                     code: code,
                     redirect_uri: redirectUri,
                     grant_type: "authorization_code",
+                    code_verifier: codeVerifier,
                     scope: "Calendars.ReadWrite User.Read",
                 }),
             }

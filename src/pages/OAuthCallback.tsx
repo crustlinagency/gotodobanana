@@ -52,6 +52,13 @@ export default function OAuthCallback() {
             
             (async () => {
                 try {
+                    // Get the code verifier from sessionStorage (stored in parent window)
+                    const codeVerifier = window.opener?.sessionStorage.getItem("microsoft_code_verifier");
+                    if (!codeVerifier) {
+                        throw new Error("Code verifier not found. Please try authenticating again.");
+                    }
+                    console.log("[OAuth Callback] Code verifier retrieved from parent window");
+
                     // Exchange code for access token using backend function
                     const redirectUri = `${window.location.origin}/oauth/callback`;
                     console.log("[OAuth Callback] Exchanging code for token with redirect URI:", redirectUri);
@@ -59,6 +66,7 @@ export default function OAuthCallback() {
                     const tokenResponse = await exchangeMicrosoftCode({
                         code,
                         redirectUri,
+                        codeVerifier,
                     });
 
                     if (!tokenResponse.access_token) {
@@ -67,14 +75,16 @@ export default function OAuthCallback() {
 
                     console.log("[OAuth Callback] Token received, storing in localStorage");
 
-                    // Store the token
-                    localStorage.setItem("microsoft_calendar_token", tokenResponse.access_token);
-                    
-                    // Store the expiry time
-                    if (tokenResponse.expires_in) {
-                        const expiryTime = Date.now() + tokenResponse.expires_in * 1000;
-                        localStorage.setItem("microsoft_calendar_token_expiry", expiryTime.toString());
-                        console.log("[OAuth Callback] Token expiry set:", new Date(expiryTime).toISOString());
+                    // Store the token in parent window's localStorage
+                    if (window.opener) {
+                        window.opener.localStorage.setItem("microsoft_calendar_token", tokenResponse.access_token);
+                        
+                        // Store the expiry time
+                        if (tokenResponse.expires_in) {
+                            const expiryTime = Date.now() + tokenResponse.expires_in * 1000;
+                            window.opener.localStorage.setItem("microsoft_calendar_token_expiry", expiryTime.toString());
+                            console.log("[OAuth Callback] Token expiry set:", new Date(expiryTime).toISOString());
+                        }
                     }
 
                     console.log("✅ [OAuth Callback] Microsoft Calendar authenticated successfully");

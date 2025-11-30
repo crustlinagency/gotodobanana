@@ -26,23 +26,62 @@ async function getClientId(): Promise<string> {
     }
 }
 
+// PKCE helper functions
+function generateRandomString(length: number): string {
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    let text = '';
+    for (let i = 0; i < length; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
+
+async function generateCodeChallenge(codeVerifier: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(codeVerifier);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return base64UrlEncode(hash);
+}
+
+function base64UrlEncode(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+}
+
 export const microsoftOutlook = {
     calendar: {
         /**
-         * Initiate OAuth 2.0 authentication flow with Microsoft
+         * Initiate OAuth 2.0 authentication flow with Microsoft (with PKCE)
          */
         authenticate: async () => {
-            console.log("[Microsoft Auth] Starting authentication flow");
+            console.log("[Microsoft Auth] Starting authentication flow with PKCE");
             const clientId = await getClientId();
             console.log("[Microsoft Auth] Client ID retrieved");
 
+            // Generate PKCE parameters
+            const codeVerifier = generateRandomString(128);
+            const codeChallenge = await generateCodeChallenge(codeVerifier);
+            
+            // Store code verifier for later use
+            sessionStorage.setItem("microsoft_code_verifier", codeVerifier);
+            console.log("[Microsoft Auth] PKCE code verifier generated and stored");
+
             const authUrl = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
             authUrl.searchParams.append("client_id", clientId);
-            authUrl.searchParams.append("response_type", "code"); // Changed from "token" to "code"
+            authUrl.searchParams.append("response_type", "code");
             authUrl.searchParams.append("redirect_uri", REDIRECT_URI);
             authUrl.searchParams.append("scope", SCOPES);
-            authUrl.searchParams.append("response_mode", "query"); // Changed from "fragment" to "query"
+            authUrl.searchParams.append("response_mode", "query");
             authUrl.searchParams.append("state", "microsoft_calendar");
+            authUrl.searchParams.append("code_challenge", codeChallenge);
+            authUrl.searchParams.append("code_challenge_method", "S256");
 
             console.log("[Microsoft Auth] Auth URL:", authUrl.toString());
 
@@ -80,6 +119,8 @@ export const microsoftOutlook = {
                         window.removeEventListener("message", messageHandler);
                         clearInterval(checkInterval);
                         clearTimeout(timeout);
+                        // Clean up code verifier
+                        sessionStorage.removeItem("microsoft_code_verifier");
                         resolve({ success: true });
                     } else if (event.data.type === "oauth_error") {
                         messageReceived = true;
@@ -87,6 +128,8 @@ export const microsoftOutlook = {
                         window.removeEventListener("message", messageHandler);
                         clearInterval(checkInterval);
                         clearTimeout(timeout);
+                        // Clean up code verifier
+                        sessionStorage.removeItem("microsoft_code_verifier");
                         reject(new Error(event.data.errorDescription || event.data.error || "Authentication failed"));
                     }
                 };
@@ -111,9 +154,13 @@ export const microsoftOutlook = {
                                 
                                 if (token) {
                                     console.log("✅ [Microsoft Auth] Authentication successful via localStorage");
+                                    // Clean up code verifier
+                                    sessionStorage.removeItem("microsoft_code_verifier");
                                     resolve({ success: true });
                                 } else {
                                     console.error("[Microsoft Auth] No token found, authentication cancelled or failed");
+                                    // Clean up code verifier
+                                    sessionStorage.removeItem("microsoft_code_verifier");
                                     reject(new Error("Authentication cancelled or failed. Please try again."));
                                 }
                             }
@@ -129,6 +176,8 @@ export const microsoftOutlook = {
                     if (!popup.closed) {
                         popup.close();
                     }
+                    // Clean up code verifier
+                    sessionStorage.removeItem("microsoft_code_verifier");
                     reject(new Error("Authentication timeout. Please try again."));
                 }, 300000);
             });
@@ -251,6 +300,7 @@ export const microsoftOutlook = {
         disconnect: () => {
             localStorage.removeItem("microsoft_calendar_token");
             localStorage.removeItem("microsoft_calendar_token_expiry");
+            sessionStorage.removeItem("microsoft_code_verifier");
         },
     },
 };
