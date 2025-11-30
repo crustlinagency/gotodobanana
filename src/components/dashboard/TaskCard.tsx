@@ -45,7 +45,6 @@ export default function TaskCard({
 
   const toggleCompleteMutation = useMutation({
     mutationFn: async () => {
-      // CRITICAL: Verify task ownership before update
       const user = await User.me();
       if (!user?.email) {
         throw new Error("Not authenticated");
@@ -136,7 +135,6 @@ export default function TaskCard({
 
   const softDeleteMutation = useMutation({
     mutationFn: async () => {
-      // CRITICAL: Verify task ownership before delete
       const user = await User.me();
       if (!user?.email) {
         throw new Error("Not authenticated");
@@ -159,12 +157,19 @@ export default function TaskCard({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Task moved to trash");
+      setShowDeleteDialog(false);
+      setIsDetailOpen(false);
     },
     onError: (error: any) => {
       console.error("Error deleting task:", error);
       toast.error(error.message || "Failed to delete task");
+      setShowDeleteDialog(false);
     },
   });
+
+  const handleDelete = async () => {
+    softDeleteMutation.mutate();
+  };
 
   const getPriorityClass = (priority: string) => {
     switch (priority) {
@@ -376,6 +381,7 @@ export default function TaskCard({
           setIsDetailOpen(false);
           onEdit(task);
         }}
+        onDelete={handleDelete}
       />
 
       <DeleteConfirmDialog
@@ -383,7 +389,6 @@ export default function TaskCard({
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={() => {
           softDeleteMutation.mutate();
-          setShowDeleteDialog(false);
         }}
         itemName={task.title}
       />

@@ -21,7 +21,6 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
 
     const softDeleteMutation = useMutation({
         mutationFn: async () => {
-            // CRITICAL: Verify task ownership before delete
             const user = await User.me();
             if (!user?.email) {
                 throw new Error("Not authenticated");
@@ -44,10 +43,12 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
             toast.success("Task moved to trash");
+            setShowDeleteDialog(false);
         },
         onError: (error: any) => {
             console.error("Error deleting task:", error);
             toast.error(error.message || "Failed to delete task");
+            setShowDeleteDialog(false);
         },
     });
 
@@ -78,7 +79,7 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
             >
                 <div className="flex items-start justify-between gap-2 mb-2">
                     <h4 
-                        className="font-medium text-sm flex-1"
+                        className="font-medium text-sm flex-1 cursor-pointer hover:text-banana-600"
                         onClick={(e) => {
                             e.stopPropagation();
                             onClick(task);
@@ -141,7 +142,6 @@ export default function KanbanTaskCard({ task, onClick }: KanbanTaskCardProps) {
                 onClose={() => setShowDeleteDialog(false)}
                 onConfirm={() => {
                     softDeleteMutation.mutate();
-                    setShowDeleteDialog(false);
                 }}
                 itemName={task.title}
             />

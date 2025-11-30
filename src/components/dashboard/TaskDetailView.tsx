@@ -97,7 +97,7 @@ export default function TaskDetailView({ task, open, onClose, onEdit, onDelete }
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onClose} modal={true}>
+      <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="space-y-4">
             <div className="flex items-start justify-between">
