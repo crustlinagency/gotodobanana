@@ -87,6 +87,10 @@
     "parentRecurringTaskId": {
       "type": "string",
       "description": "ID of the parent recurring task template"
+    },
+    "isSampleData": {
+      "type": "boolean",
+      "description": "Indicates if this task was created from sample data template"
     }
   }
 }

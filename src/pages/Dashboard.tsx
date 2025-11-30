@@ -18,6 +18,7 @@ import TrashView from "@/components/dashboard/TrashView";
 import WidgetsSidebar from "@/components/dashboard/WidgetsSidebar";
 import Breadcrumb from "@/components/dashboard/Breadcrumb";
 import ViewAsUserBanner from "@/components/dashboard/ViewAsUserBanner";
+import SampleDataInitializer from "@/components/dashboard/SampleDataInitializer";
 import Footer from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Keyboard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
@@ -321,6 +322,8 @@ export default function Dashboard() {
 
     return (
         <div className="h-screen flex flex-col overflow-hidden">
+            <SampleDataInitializer />
+            
             <DashboardHeader 
                 onNewTask={handleNewTask} 
                 onSearch={setSearchQuery}

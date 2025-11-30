@@ -4,7 +4,7 @@
   "properties": {
     "role": {
       "type": "string",
-      "description": "User role: user, premium, or admin",
+      "description": "User role: user, premium, team, or administrator",
       "default": "user"
     },
     "tagVisibility": {
@@ -14,7 +14,7 @@
     },
     "preferences": {
       "type": "object",
-      "description": "User preferences and settings"
+      "description": "User preferences and settings (includes sampleDataInitialized flag)"
     }
   }
 }
