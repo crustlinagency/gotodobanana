@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import AdminDashboard from "./pages/AdminDashboard";
+import OAuthCallback from "./pages/OAuthCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -40,6 +41,7 @@ const App = () => (
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/admin" element={<AdminDashboard />} />
+                        <Route path="/oauth/callback" element={<OAuthCallback />} />
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                         <Route path="*" element={<NotFound />} />
                     </Routes>
