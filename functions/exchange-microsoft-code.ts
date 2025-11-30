@@ -25,12 +25,11 @@ Deno.serve(async (req) => {
         }
 
         const clientId = Deno.env.get("VITE_MICROSOFT_CLIENT_ID");
-        const clientSecret = Deno.env.get("VITE_MICROSOFT_CLIENT_SECRET");
 
-        if (!clientId || !clientSecret) {
-            console.error("[Exchange Microsoft Code] Missing client credentials");
+        if (!clientId) {
+            console.error("[Exchange Microsoft Code] Missing client ID");
             return new Response(
-                JSON.stringify({ error: "Microsoft credentials not configured" }),
+                JSON.stringify({ error: "Microsoft Client ID not configured" }),
                 {
                     status: 500,
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -40,7 +39,7 @@ Deno.serve(async (req) => {
 
         console.log("[Exchange Microsoft Code] Exchanging code for token with PKCE");
 
-        // Exchange the code for an access token with PKCE
+        // Exchange the code for an access token with PKCE (no client secret needed)
         const tokenResponse = await fetch(
             "https://login.microsoftonline.com/common/oauth2/v2.0/token",
             {
@@ -50,7 +49,6 @@ Deno.serve(async (req) => {
                 },
                 body: new URLSearchParams({
                     client_id: clientId,
-                    client_secret: clientSecret,
                     code: code,
                     redirect_uri: redirectUri,
                     grant_type: "authorization_code",
