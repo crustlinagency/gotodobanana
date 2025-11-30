@@ -1,5 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Clock, Target, TrendingUp } from "lucide-react";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface StatsWidgetProps {
   totalTasks: number;
@@ -48,17 +53,26 @@ export default function StatsWidget({
   return (
     <div className="grid grid-cols-2 gap-3">
       {stats.map((stat, index) => (
-        <Card key={index} className="p-3">
-          <div className="flex items-center gap-3">
-            <div className={`${stat.bgColor} p-2 rounded-lg ${stat.color} shrink-0`}>
-              {stat.icon}
-            </div>
-            <div className="min-w-0">
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="text-xs text-muted-foreground truncate">{stat.label}</div>
-            </div>
-          </div>
-        </Card>
+        <Tooltip key={index}>
+          <TooltipTrigger asChild>
+            <Card className="p-3 cursor-help">
+              <div className="flex items-center gap-3">
+                <div className={`${stat.bgColor} p-2 rounded-lg ${stat.color} shrink-0`}>
+                  {stat.icon}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <div className="text-xs text-muted-foreground truncate md:hidden">
+                    {stat.label.split(' ')[0]}...
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{stat.label}</p>
+          </TooltipContent>
+        </Tooltip>
       ))}
     </div>
   );

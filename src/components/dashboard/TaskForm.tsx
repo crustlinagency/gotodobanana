@@ -54,6 +54,17 @@ export default function TaskForm({ open, onOpenChange, task, defaultListId, onSu
 
   const queryClient = useQueryClient();
 
+  const { data: user } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const currentUser = await User.me();
+      if (!currentUser?.id) {
+        throw new Error("User not authenticated");
+      }
+      return currentUser;
+    },
+  });
+
   const { data: lists = [] } = useQuery({
     queryKey: ["lists"],
     queryFn: async () => {
@@ -114,9 +125,15 @@ export default function TaskForm({ open, onOpenChange, task, defaultListId, onSu
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: any) => {
-      console.log("Creating task with data:", data);
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      console.log("✅ SECURITY: Creating task with userId:", user.id);
+      console.log("Task data:", data);
+      
       const result = await Task.create(data);
-      console.log("Task created successfully:", result);
+      console.log("✅ Task created successfully:", result);
       return result;
     },
     onSuccess: (data) => {
@@ -126,7 +143,7 @@ export default function TaskForm({ open, onOpenChange, task, defaultListId, onSu
       handleClose();
     },
     onError: (error: any) => {
-      console.error("Error creating task:", error);
+      console.error("❌ Error creating task:", error);
       toast.error("Failed to create task. Please try again.");
       if (error?.message?.includes("auth") || error?.message?.includes("JWT")) {
         handleClose();
@@ -175,12 +192,18 @@ export default function TaskForm({ open, onOpenChange, task, defaultListId, onSu
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user?.id) {
+      toast.error("You must be logged in to create tasks");
+      return;
+    }
 
     console.log("Attempting to create task with title:", title);
 
     const taskData = {
+      userId: user.id,
       title,
       description,
       priority,
@@ -199,7 +222,7 @@ export default function TaskForm({ open, onOpenChange, task, defaultListId, onSu
       parentRecurringTaskId: null,
     };
 
-    console.log("Task data prepared:", taskData);
+    console.log("✅ SECURITY: Task data prepared with userId:", taskData.userId);
 
     if (task) {
       updateTaskMutation.mutate(taskData);
@@ -236,6 +259,21 @@ export default function TaskForm({ open, onOpenChange, task, defaultListId, onSu
   }, [open]);
 
   const isSaving = createTaskMutation.isPending || updateTaskMutation.isPending;
+
+  if (!user?.id && open) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Authentication Required</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-center text-muted-foreground">
+            You must be logged in to create tasks.
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <>

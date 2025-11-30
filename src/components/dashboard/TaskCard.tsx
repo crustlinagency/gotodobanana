@@ -79,7 +79,10 @@ export default function TaskCard({
         );
 
         if (nextDate) {
+          console.log("✅ SECURITY: Creating recurring task instance with userId:", user.id);
+          
           await Task.create({
+            userId: user.id,
             title: task.title,
             description: task.description,
             priority: task.priority,
@@ -98,7 +101,7 @@ export default function TaskCard({
             parentRecurringTaskId: task.parentRecurringTaskId || task.id,
           });
           
-          console.log("Created next recurring task instance for:", nextDate);
+          console.log("✅ Created next recurring task instance for:", nextDate);
         } else {
           console.log("Recurring series has ended");
         }
