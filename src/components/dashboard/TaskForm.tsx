@@ -127,7 +127,11 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     },
     onError: (error: any) => {
       console.error("Error creating task:", error);
-      toast.error("Failed to create task");
+      toast.error("Failed to create task. Please try again.");
+      // Close dialog on auth errors
+      if (error?.message?.includes("auth") || error?.message?.includes("JWT")) {
+        handleClose();
+      }
     },
   });
 
@@ -221,6 +225,16 @@ export default function TaskForm({ open, onClose, task, defaultListId }: TaskFor
     setShowDeleteDialog(false);
     onClose();
   };
+
+  // Close form if authentication fails
+  useEffect(() => {
+    if (open) {
+      User.me().catch(() => {
+        console.log("Auth check failed, closing form");
+        handleClose();
+      });
+    }
+  }, [open]);
 
   return (
     <>

@@ -179,11 +179,7 @@ export default function Dashboard() {
         ? tasks.filter((task: any) => task.priority === "High" && !task.completed)
         : tasks;
 
-    useEffect(() => {
-        if (!userLoading && !user) {
-            User.login();
-        }
-    }, [user, userLoading, navigate]);
+    // useUser hook now handles the redirect, so we don't need this effect
 
     useKeyboardShortcuts({
         onNewTask: () => {
@@ -212,7 +208,14 @@ export default function Dashboard() {
     }
 
     if (!user) {
-        return null;
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-banana-600 mx-auto mb-4" />
+                    <p className="text-muted-foreground">Redirecting to login...</p>
+                </div>
+            </div>
+        );
     }
 
     const completedTasks = tasks.filter((task: any) => task.completed).length;
