@@ -1,260 +1,174 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Subtask, Task, User } from "@/entities";
+import { Subtask, User } from "@/entities";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ListChecks, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 interface TaskSubtasksProps {
-    taskId: string;
+  taskId: string;
 }
 
 export default function TaskSubtasks({ taskId }: TaskSubtasksProps) {
-    const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
-    const [isAdding, setIsAdding] = useState(false);
-    const queryClient = useQueryClient();
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const queryClient = useQueryClient();
 
-    const { data: subtasks = [], isLoading } = useQuery({
-        queryKey: ["subtasks", taskId],
-        queryFn: async () => {
-            try {
-                const user = await User.me();
-                if (!user?.email) {
-                    console.error("❌ SECURITY: No authenticated user");
-                    return [];
-                }
+  const { data: user } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const user = await User.me();
+      return user;
+    },
+  });
 
-                console.log("✅ SECURITY: Verifying task ownership for subtasks, user:", user.email);
-                
-                const taskResult = await Task.filter({ 
-                    id: taskId,
-                    created_by: user.email 
-                });
-                
-                if (!taskResult || taskResult.length === 0) {
-                    console.error("❌ SECURITY: Task not found or access denied");
-                    return [];
-                }
+  const { data: subtasks = [], isLoading } = useQuery({
+    queryKey: ["subtasks", taskId],
+    queryFn: async () => {
+      try {
+        console.log("✅ SECURITY: Fetching subtasks for task:", taskId);
+        const result = await Subtask.filter({ parentTaskId: taskId }, "order");
+        console.log(`✅ SECURITY: Found ${result?.length || 0} subtasks`);
+        return result || [];
+      } catch (error) {
+        console.error("❌ SECURITY: Error fetching subtasks:", error);
+        return [];
+      }
+    },
+  });
 
-                console.log("✅ SECURITY: Task ownership verified, fetching subtasks");
-                // CRITICAL: Also filter subtasks by created_by for defense in depth
-                const result = await Subtask.filter({ 
-                    parentTaskId: taskId,
-                    created_by: user.email 
-                }, "order");
-                console.log(`✅ SECURITY: Found ${result?.length || 0} subtasks for user ${user.email}`);
-                return result || [];
-            } catch (error) {
-                console.error("❌ SECURITY: Error fetching subtasks:", error);
-                return [];
-            }
-        },
-    });
+  const createSubtaskMutation = useMutation({
+    mutationFn: async (title: string) => {
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
 
-    const createSubtaskMutation = useMutation({
-        mutationFn: async (title: string) => {
-            await Subtask.create({
-                parentTaskId: taskId,
-                title,
-                completed: false,
-                order: subtasks.length,
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
-            setNewSubtaskTitle("");
-            setIsAdding(false);
-            toast.success("Subtask added");
-        },
-        onError: (error) => {
-            console.error("Error creating subtask:", error);
-            toast.error("Failed to add subtask");
-        },
-    });
+      console.log("✅ SECURITY: Creating subtask with userId:", user.id);
+      return await Subtask.create({
+        parentTaskId: taskId,
+        userId: user.id, // CRITICAL: Use userId
+        title,
+        completed: false,
+        order: subtasks.length,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
+      setNewSubtaskTitle("");
+      toast.success("Subtask added");
+    },
+    onError: (error: any) => {
+      console.error("❌ SECURITY: Error creating subtask:", error);
+      toast.error("Failed to add subtask");
+    },
+  });
 
-    const toggleSubtaskMutation = useMutation({
-        mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
-            // CRITICAL: Verify subtask ownership before update
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
+  const toggleSubtaskMutation = useMutation({
+    mutationFn: async ({ id, completed }: { id: string; completed: boolean }) => {
+      return await Subtask.update(id, {
+        completed,
+        completedAt: completed ? new Date().toISOString() : null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
+    },
+    onError: () => {
+      toast.error("Failed to update subtask");
+    },
+  });
 
-            const existingSubtask = await Subtask.filter({ 
-                id, 
-                created_by: user.email 
-            });
+  const deleteSubtaskMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await Subtask.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
+      toast.success("Subtask deleted");
+    },
+    onError: () => {
+      toast.error("Failed to delete subtask");
+    },
+  });
 
-            if (!existingSubtask || existingSubtask.length === 0) {
-                throw new Error("Subtask not found or access denied");
-            }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newSubtaskTitle.trim()) {
+      createSubtaskMutation.mutate(newSubtaskTitle);
+    }
+  };
 
-            await Subtask.update(id, {
-                completed: !completed,
-                completedAt: !completed ? new Date().toISOString() : null,
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
-        },
-        onError: (error: any) => {
-            console.error("Error toggling subtask:", error);
-            toast.error(error.message || "Failed to update subtask");
-        },
-    });
-
-    const deleteSubtaskMutation = useMutation({
-        mutationFn: async (id: string) => {
-            // CRITICAL: Verify subtask ownership before delete
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
-
-            const existingSubtask = await Subtask.filter({ 
-                id, 
-                created_by: user.email 
-            });
-
-            if (!existingSubtask || existingSubtask.length === 0) {
-                throw new Error("Subtask not found or access denied");
-            }
-
-            await Subtask.delete(id);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
-            toast.success("Subtask deleted");
-        },
-        onError: (error: any) => {
-            console.error("Error deleting subtask:", error);
-            toast.error(error.message || "Failed to delete subtask");
-        },
-    });
-
-    const handleAddSubtask = () => {
-        if (newSubtaskTitle.trim()) {
-            createSubtaskMutation.mutate(newSubtaskTitle);
-        }
-    };
-
-    const completedCount = subtasks.filter((s: any) => s.completed).length;
-    const progress = subtasks.length > 0 ? (completedCount / subtasks.length) * 100 : 0;
-
+  if (isLoading) {
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <ListChecks className="h-5 w-5 text-muted-foreground" />
-                    <h3 className="font-semibold">
-                        Subtasks ({completedCount}/{subtasks.length})
-                    </h3>
-                </div>
-                {!isAdding && (
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsAdding(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Subtask
-                    </Button>
-                )}
-            </div>
-
-            {subtasks.length > 0 && (
-                <div className="space-y-1">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Progress</span>
-                        <span>{Math.round(progress)}%</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-banana-500 transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {isAdding && (
-                <div className="flex gap-2">
-                    <Input
-                        placeholder="Subtask title"
-                        value={newSubtaskTitle}
-                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") handleAddSubtask();
-                            if (e.key === "Escape") {
-                                setIsAdding(false);
-                                setNewSubtaskTitle("");
-                            }
-                        }}
-                        autoFocus
-                    />
-                    <Button onClick={handleAddSubtask} size="sm">
-                        Add
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                            setIsAdding(false);
-                            setNewSubtaskTitle("");
-                        }}
-                    >
-                        Cancel
-                    </Button>
-                </div>
-            )}
-
-            {subtasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                    No subtasks yet. Break down this task into smaller steps!
-                </p>
-            ) : (
-                <div className="space-y-2">
-                    {subtasks.map((subtask: any) => (
-                        <div
-                            key={subtask.id}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors group"
-                        >
-                            <Checkbox
-                                checked={subtask.completed}
-                                onCheckedChange={() =>
-                                    toggleSubtaskMutation.mutate({
-                                        id: subtask.id,
-                                        completed: subtask.completed,
-                                    })
-                                }
-                            />
-                            <span
-                                className={`flex-1 text-sm ${
-                                    subtask.completed
-                                        ? "line-through text-muted-foreground"
-                                        : ""
-                                }`}
-                            >
-                                {subtask.title}
-                            </span>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive"
-                                onClick={() => {
-                                    if (confirm("Delete this subtask?")) {
-                                        deleteSubtaskMutation.mutate(subtask.id);
-                                    }
-                                }}
-                            >
-                                <Trash2 className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-banana-500" />
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <Input
+          value={newSubtaskTitle}
+          onChange={(e) => setNewSubtaskTitle(e.target.value)}
+          placeholder="Add a subtask..."
+          className="flex-1"
+        />
+        <Button
+          type="submit"
+          size="sm"
+          disabled={!newSubtaskTitle.trim() || createSubtaskMutation.isPending}
+          className="bg-banana-500 hover:bg-banana-600 text-black"
+        >
+          {createSubtaskMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
+        </Button>
+      </form>
+
+      <div className="space-y-2">
+        {subtasks.length === 0 ? (
+          <p className="text-center text-muted-foreground py-4 text-sm">
+            No subtasks yet. Add one to break down this task!
+          </p>
+        ) : (
+          subtasks.map((subtask: any) => (
+            <div
+              key={subtask.id}
+              className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50"
+            >
+              <Checkbox
+                checked={subtask.completed}
+                onCheckedChange={(checked) =>
+                  toggleSubtaskMutation.mutate({
+                    id: subtask.id,
+                    completed: checked as boolean,
+                  })
+                }
+              />
+              <span
+                className={`flex-1 text-sm ${
+                  subtask.completed ? "line-through text-muted-foreground" : ""
+                }`}
+              >
+                {subtask.title}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => deleteSubtaskMutation.mutate(subtask.id)}
+                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 }

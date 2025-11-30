@@ -1,198 +1,138 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Comment, Task, User } from "@/entities";
+import { Comment, User } from "@/entities";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { formatDistanceToNow } from "date-fns";
-import { MessageSquare, Send, Trash2 } from "lucide-react";
+import { Loader2, Send } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 interface TaskCommentsProps {
-    taskId: string;
+  taskId: string;
 }
 
 export default function TaskComments({ taskId }: TaskCommentsProps) {
-    const [newComment, setNewComment] = useState("");
-    const queryClient = useQueryClient();
+  const [newComment, setNewComment] = useState("");
+  const queryClient = useQueryClient();
 
-    const { data: user } = useQuery({
-        queryKey: ["user"],
-        queryFn: async () => await User.me(),
-    });
+  const { data: user } = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const user = await User.me();
+      return user;
+    },
+  });
 
-    const { data: comments = [], isLoading } = useQuery({
-        queryKey: ["comments", taskId],
-        queryFn: async () => {
-            try {
-                const user = await User.me();
-                if (!user?.email) {
-                    console.error("❌ SECURITY: No authenticated user");
-                    return [];
-                }
+  const { data: comments = [], isLoading } = useQuery({
+    queryKey: ["comments", taskId],
+    queryFn: async () => {
+      try {
+        console.log("✅ SECURITY: Fetching comments for task:", taskId);
+        const result = await Comment.filter({ taskId }, "-created_at");
+        console.log(`✅ SECURITY: Found ${result?.length || 0} comments`);
+        return result || [];
+      } catch (error) {
+        console.error("❌ SECURITY: Error fetching comments:", error);
+        return [];
+      }
+    },
+  });
 
-                console.log("✅ SECURITY: Verifying task ownership for comments, user:", user.email);
-                
-                const taskResult = await Task.filter({ 
-                    id: taskId,
-                    created_by: user.email 
-                });
-                
-                if (!taskResult || taskResult.length === 0) {
-                    console.error("❌ SECURITY: Task not found or access denied");
-                    return [];
-                }
+  const createCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
 
-                console.log("✅ SECURITY: Task ownership verified, fetching comments");
-                // CRITICAL: Also filter comments by created_by for defense in depth
-                const result = await Comment.filter({ 
-                    taskId,
-                    created_by: user.email 
-                }, "-created_at");
-                console.log(`✅ SECURITY: Found ${result?.length || 0} comments for user ${user.email}`);
-                return result || [];
-            } catch (error) {
-                console.error("❌ SECURITY: Error fetching comments:", error);
-                return [];
-            }
-        },
-    });
+      console.log("✅ SECURITY: Creating comment with userId:", user.id);
+      return await Comment.create({
+        taskId,
+        userId: user.id, // CRITICAL: Use userId
+        content,
+        timestamp: new Date().toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comments", taskId] });
+      setNewComment("");
+      toast.success("Comment added");
+    },
+    onError: (error: any) => {
+      console.error("❌ SECURITY: Error creating comment:", error);
+      toast.error("Failed to add comment");
+    },
+  });
 
-    const addCommentMutation = useMutation({
-        mutationFn: async (content: string) => {
-            await Comment.create({
-                taskId,
-                content,
-                timestamp: new Date().toISOString(),
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["comments", taskId] });
-            setNewComment("");
-            toast.success("Comment added");
-        },
-        onError: (error) => {
-            console.error("Error adding comment:", error);
-            toast.error("Failed to add comment");
-        },
-    });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newComment.trim()) {
+      createCommentMutation.mutate(newComment);
+    }
+  };
 
-    const deleteCommentMutation = useMutation({
-        mutationFn: async (commentId: string) => {
-            // CRITICAL: Verify comment ownership before delete
-            const user = await User.me();
-            if (!user?.email) {
-                throw new Error("Not authenticated");
-            }
-
-            const existingComment = await Comment.filter({ 
-                id: commentId, 
-                created_by: user.email 
-            });
-
-            if (!existingComment || existingComment.length === 0) {
-                throw new Error("Comment not found or access denied");
-            }
-
-            await Comment.delete(commentId);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["comments", taskId] });
-            toast.success("Comment deleted");
-        },
-        onError: (error: any) => {
-            console.error("Error deleting comment:", error);
-            toast.error(error.message || "Failed to delete comment");
-        },
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newComment.trim()) {
-            addCommentMutation.mutate(newComment);
-        }
-    };
-
-    const getInitials = (email: string) => {
-        return email.substring(0, 2).toUpperCase();
-    };
-
+  if (isLoading) {
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                <h3 className="font-semibold">
-                    Comments ({comments.length})
-                </h3>
-            </div>
-
-            {/* Comment List */}
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                {comments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                        No comments yet. Be the first to comment!
-                    </p>
-                ) : (
-                    comments.map((comment: any) => (
-                        <div key={comment.id} className="flex gap-3 p-3 rounded-lg bg-muted/30 group">
-                            <Avatar className="h-8 w-8">
-                                <AvatarFallback className="text-xs bg-banana-500 text-black">
-                                    {getInitials(comment.created_by || "U")}
-                                </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium">
-                                        {comment.created_by}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {formatDistanceToNow(new Date(comment.timestamp), {
-                                            addSuffix: true,
-                                        })}
-                                    </span>
-                                </div>
-                                <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
-                            </div>
-                            {user?.email === comment.created_by && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive"
-                                    onClick={() => {
-                                        if (confirm("Delete this comment?")) {
-                                            deleteCommentMutation.mutate(comment.id);
-                                        }
-                                    }}
-                                >
-                                    <Trash2 className="h-3 w-3" />
-                                </Button>
-                            )}
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* Add Comment Form */}
-            <form onSubmit={handleSubmit} className="space-y-2">
-                <Textarea
-                    placeholder="Add a comment..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={3}
-                    className="resize-none"
-                />
-                <div className="flex justify-end">
-                    <Button
-                        type="submit"
-                        size="sm"
-                        disabled={!newComment.trim() || addCommentMutation.isPending}
-                        className="bg-banana-500 hover:bg-banana-600 text-black"
-                    >
-                        <Send className="h-4 w-4 mr-2" />
-                        Comment
-                    </Button>
-                </div>
-            </form>
-        </div>
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-banana-500" />
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <Textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Add a comment..."
+          rows={3}
+        />
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            size="sm"
+            disabled={!newComment.trim() || createCommentMutation.isPending}
+            className="bg-banana-500 hover:bg-banana-600 text-black"
+          >
+            {createCommentMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            Add Comment
+          </Button>
+        </div>
+      </form>
+
+      <div className="space-y-4">
+        {comments.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">
+            No comments yet. Be the first to comment!
+          </p>
+        ) : (
+          comments.map((comment: any) => (
+            <div key={comment.id} className="flex gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback>
+                  {comment.created_by?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">
+                    {comment.created_by || "Unknown"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(comment.timestamp), "PPp")}
+                  </span>
+                </div>
+                <p className="text-sm mt-1">{comment.content}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 }

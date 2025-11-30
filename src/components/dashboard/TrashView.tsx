@@ -1,209 +1,176 @@
-import { Task, User } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { Task, User } from "@/entities";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { RefreshCcw, Trash2, Calendar, Loader2 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { Card } from "@/components/ui/card";
+import { Trash2, RotateCcw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { format } from "date-fns";
 import DeleteConfirmDialog from "./DeleteConfirmDialog";
-import { getTaskPreview } from "@/lib/html-utils";
+import { useState } from "react";
 
 export default function TrashView() {
-    const queryClient = useQueryClient();
-    const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  const [taskToDelete, setTaskToDelete] = useState<any>(null);
+  const queryClient = useQueryClient();
 
-    const { data: deletedTasks = [], isLoading } = useQuery({
-        queryKey: ["deletedTasks"],
-        queryFn: async () => {
-            try {
-                const user = await User.me();
-                if (!user?.email) {
-                    console.error("No authenticated user found");
-                    return [];
-                }
+  const { data: deletedTasks = [], isLoading } = useQuery({
+    queryKey: ["deletedTasks"],
+    queryFn: async () => {
+      try {
+        const user = await User.me();
+        if (!user?.id) {
+          console.error("❌ SECURITY: No authenticated user found");
+          return [];
+        }
 
-                console.log("Fetching deleted tasks for user:", user.email);
-                
-                const result = await Task.filter({ 
-                    deleted: true,
-                    created_by: user.email // CRITICAL: Filter by current user
-                }, "-deletedAt");
-                
-                console.log(`Found ${result?.length || 0} deleted tasks`);
-                return result || [];
-            } catch (error) {
-                console.error("Error fetching deleted tasks:", error);
-                return [];
-            }
-        },
-    });
+        console.log("✅ SECURITY: Fetching deleted tasks for userId:", user.id);
+        const result = await Task.filter({ 
+          deleted: true,
+          userId: user.id // CRITICAL: Filter by userId
+        }, "-deletedAt");
+        
+        console.log(`✅ SECURITY: Found ${result?.length || 0} deleted tasks`);
+        return result || [];
+      } catch (error) {
+        console.error("❌ SECURITY: Error fetching deleted tasks:", error);
+        return [];
+      }
+    },
+  });
 
-    const restoreTaskMutation = useMutation({
-        mutationFn: async (taskId: string) => {
-            await Task.update(taskId, {
-                deleted: false,
-                deletedAt: null,
-            });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
-            queryClient.invalidateQueries({ queryKey: ["tasks"] });
-            queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
-            toast.success("Task restored successfully");
-        },
-    });
+  const restoreMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      await Task.update(taskId, {
+        deleted: false,
+        deletedAt: null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Task restored successfully");
+    },
+    onError: () => {
+      toast.error("Failed to restore task");
+    },
+  });
 
-    const permanentDeleteMutation = useMutation({
-        mutationFn: async (taskId: string) => {
-            await Task.delete(taskId);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
-            queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
-            toast.success("Task permanently deleted");
-        },
-    });
+  const permanentDeleteMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      await Task.delete(taskId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
+      toast.success("Task permanently deleted");
+      setTaskToDelete(null);
+    },
+    onError: () => {
+      toast.error("Failed to delete task");
+      setTaskToDelete(null);
+    },
+  });
 
-    const emptyTrashMutation = useMutation({
-        mutationFn: async () => {
-            const deletePromises = deletedTasks.map((task) => Task.delete(task.id));
-            await Promise.all(deletePromises);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
-            queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
-            toast.success("Trash emptied");
-        },
-    });
+  const emptyTrashMutation = useMutation({
+    mutationFn: async () => {
+      const deletePromises = deletedTasks.map((task: any) => Task.delete(task.id));
+      await Promise.all(deletePromises);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
+      toast.success("Trash emptied successfully");
+    },
+    onError: () => {
+      toast.error("Failed to empty trash");
+    },
+  });
 
-    const getDaysRemaining = (deletedAt: string) => {
-        const daysPassed = differenceInDays(new Date(), new Date(deletedAt));
-        return Math.max(0, 7 - daysPassed);
-    };
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 animate-spin text-banana-600" />
-            </div>
-        );
-    }
-
+  if (isLoading) {
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold">Trash</h2>
-                    <p className="text-muted-foreground">
-                        Tasks are automatically deleted after 7 days
-                    </p>
-                </div>
-                {deletedTasks.length > 0 && (
-                    <Button
-                        variant="destructive"
-                        onClick={() => {
-                            if (confirm("Permanently delete all tasks in trash? This cannot be undone.")) {
-                                emptyTrashMutation.mutate();
-                            }
-                        }}
-                    >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Empty Trash
-                    </Button>
-                )}
-            </div>
-
-            {deletedTasks.length === 0 ? (
-                <Card className="p-12 text-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="p-4 bg-muted rounded-full">
-                            <Trash2 className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <div>
-                            <h3 className="font-semibold text-lg mb-1">Trash is empty</h3>
-                            <p className="text-sm text-muted-foreground">
-                                Deleted tasks will appear here
-                            </p>
-                        </div>
-                    </div>
-                </Card>
-            ) : (
-                <div className="space-y-3">
-                    {deletedTasks.map((task) => {
-                        const daysRemaining = getDaysRemaining(task.deletedAt);
-                        return (
-                            <Card key={task.id} className="p-4">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex-1 space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-medium">{task.title}</h3>
-                                            {task.priority && (
-                                                <Badge variant="outline" className="text-xs">
-                                                    {task.priority}
-                                                </Badge>
-                                            )}
-                                        </div>
-                                        
-                                        {task.description && (
-                                            <p className="text-sm text-muted-foreground">
-                                                {getTaskPreview(task.description, 100)}
-                                            </p>
-                                        )}
-
-                                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" />
-                                                Deleted {format(new Date(task.deletedAt), "MMM d, yyyy")}
-                                            </span>
-                                            <Badge
-                                                variant={daysRemaining <= 2 ? "destructive" : "secondary"}
-                                                className="text-xs"
-                                            >
-                                                {daysRemaining === 0
-                                                    ? "Deletes today"
-                                                    : `${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} remaining`}
-                                            </Badge>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => restoreTaskMutation.mutate(task.id)}
-                                        >
-                                            <RefreshCcw className="h-4 w-4 mr-2" />
-                                            Restore
-                                        </Button>
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => setTaskToDelete(task)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        );
-                    })}
-                </div>
-            )}
-
-            <DeleteConfirmDialog
-                open={!!taskToDelete}
-                onClose={() => setTaskToDelete(null)}
-                onConfirm={() => {
-                    if (taskToDelete) {
-                        permanentDeleteMutation.mutate(taskToDelete.id);
-                        setTaskToDelete(null);
-                    }
-                }}
-                itemName={taskToDelete?.title}
-                isPermanent={true}
-            />
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-banana-500" />
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Trash</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {deletedTasks.length} {deletedTasks.length === 1 ? "item" : "items"}
+          </p>
+        </div>
+        {deletedTasks.length > 0 && (
+          <Button
+            variant="destructive"
+            onClick={() => emptyTrashMutation.mutate()}
+            disabled={emptyTrashMutation.isPending}
+          >
+            {emptyTrashMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            Empty Trash
+          </Button>
+        )}
+      </div>
+
+      {deletedTasks.length === 0 ? (
+        <Card className="p-12 text-center">
+          <Trash2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Trash is empty</h3>
+          <p className="text-muted-foreground">
+            Deleted tasks will appear here
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {deletedTasks.map((task: any) => (
+            <Card key={task.id} className="p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold truncate">{task.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Deleted {task.deletedAt ? format(new Date(task.deletedAt), "PPp") : "recently"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => restoreMutation.mutate(task.id)}
+                    disabled={restoreMutation.isPending}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Restore
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setTaskToDelete(task)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Forever
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <DeleteConfirmDialog
+        open={!!taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        onConfirm={() => {
+          if (taskToDelete) {
+            permanentDeleteMutation.mutate(taskToDelete.id);
+          }
+        }}
+        itemName={taskToDelete?.title}
+        permanent
+      />
+    </div>
+  );
 }

@@ -1,5 +1,5 @@
-import { List, User } from "@/entities";
 import { useQuery } from "@tanstack/react-query";
+import { List, User } from "@/entities";
 
 export function useLists() {
   return useQuery({
@@ -13,14 +13,13 @@ export function useLists() {
         }
 
         console.log("✅ SECURITY: Fetching lists for userId:", user.id);
-        
-        const lists = await List.filter({ 
+        const result = await List.filter({ 
           archived: false,
-          userId: user.id // CRITICAL: Filter by userId not email
+          userId: user.id // CRITICAL: Filter by userId
         }, "-created_at");
         
-        console.log(`✅ SECURITY: Found ${lists?.length || 0} lists for user ${user.id}`);
-        return lists || [];
+        console.log(`✅ SECURITY: Found ${result?.length || 0} lists for user`);
+        return result || [];
       } catch (error) {
         console.error("❌ SECURITY: Error fetching lists:", error);
         return [];
