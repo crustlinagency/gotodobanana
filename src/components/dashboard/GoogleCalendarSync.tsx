@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, RefreshCw, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Calendar, RefreshCw, CheckCircle2, AlertCircle, Loader2, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { googleWorkspace } from "@/integrations/google-workspace";
 import { Task, User } from "@/entities";
@@ -13,14 +13,21 @@ export default function GoogleCalendarSync() {
   const [isSyncing, setIsSyncing] = useState(false);
   const queryClient = useQueryClient();
 
+  // TEMPORARILY DISABLED - Feature is in development
+  const FEATURE_DISABLED = true;
+
   const { data: user } = useQuery({
     queryKey: ["user"],
     queryFn: async () => await User.me(),
   });
 
+  // Disabled: Connection status check
   const { data: syncStatus, isLoading: isCheckingStatus } = useQuery({
     queryKey: ["googleCalendarStatus"],
     queryFn: async () => {
+      if (FEATURE_DISABLED) {
+        return { connected: false, disabled: true };
+      }
       try {
         // Check if user has connected Google Calendar
         const status = await googleWorkspace.calendar.getConnectionStatus();
@@ -30,11 +37,16 @@ export default function GoogleCalendarSync() {
         return { connected: false };
       }
     },
-    enabled: !!user,
+    enabled: !!user && !FEATURE_DISABLED,
   });
 
+  // Disabled: Sync tasks mutation
   const syncTasksMutation = useMutation({
     mutationFn: async () => {
+      if (FEATURE_DISABLED) {
+        throw new Error("Feature temporarily disabled");
+      }
+
       if (!user?.id) {
         throw new Error("User not authenticated");
       }
@@ -90,12 +102,16 @@ export default function GoogleCalendarSync() {
     },
     onError: (error: any) => {
       console.error("❌ Error syncing to Google Calendar:", error);
-      toast.error("Failed to sync with Google Calendar. Please try again.");
+      toast.error("This feature is temporarily disabled.");
     },
   });
 
+  // Disabled: Connect mutation
   const connectMutation = useMutation({
     mutationFn: async () => {
+      if (FEATURE_DISABLED) {
+        throw new Error("Feature temporarily disabled");
+      }
       console.log("🔗 Connecting to Google Calendar...");
       await googleWorkspace.calendar.authenticate();
     },
@@ -105,11 +121,15 @@ export default function GoogleCalendarSync() {
     },
     onError: (error: any) => {
       console.error("❌ Error connecting to Google Calendar:", error);
-      toast.error("Failed to connect to Google Calendar. Please try again.");
+      toast.error("This feature is temporarily disabled.");
     },
   });
 
   const handleSync = async () => {
+    if (FEATURE_DISABLED) {
+      toast.info("Google Calendar sync is temporarily disabled while we configure the integration.");
+      return;
+    }
     setIsSyncing(true);
     try {
       await syncTasksMutation.mutateAsync();
@@ -119,10 +139,14 @@ export default function GoogleCalendarSync() {
   };
 
   const handleConnect = async () => {
+    if (FEATURE_DISABLED) {
+      toast.info("Google Calendar sync is temporarily disabled while we configure the integration.");
+      return;
+    }
     await connectMutation.mutateAsync();
   };
 
-  if (isCheckingStatus) {
+  if (isCheckingStatus && !FEATURE_DISABLED) {
     return (
       <Card>
         <CardHeader>
@@ -144,7 +168,7 @@ export default function GoogleCalendarSync() {
   }
 
   return (
-    <Card>
+    <Card className="opacity-75">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -156,7 +180,13 @@ export default function GoogleCalendarSync() {
               Keep your tasks synced with Google Calendar
             </CardDescription>
           </div>
-          {syncStatus?.connected && (
+          {FEATURE_DISABLED && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Wrench className="h-3 w-3" />
+              Coming Soon
+            </Badge>
+          )}
+          {!FEATURE_DISABLED && syncStatus?.connected && (
             <Badge variant="outline" className="flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3 text-green-600" />
               Connected
@@ -165,7 +195,15 @@ export default function GoogleCalendarSync() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!syncStatus?.connected ? (
+        {FEATURE_DISABLED ? (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Google Calendar sync is currently being configured and will be available soon. 
+              This feature will allow you to automatically sync tasks with due dates to your Google Calendar.
+            </AlertDescription>
+          </Alert>
+        ) : !syncStatus?.connected ? (
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -186,7 +224,7 @@ export default function GoogleCalendarSync() {
           {!syncStatus?.connected ? (
             <Button
               onClick={handleConnect}
-              disabled={connectMutation.isPending}
+              disabled={connectMutation.isPending || FEATURE_DISABLED}
               className="w-full bg-banana-500 hover:bg-banana-600 text-black"
             >
               {connectMutation.isPending ? (
@@ -204,7 +242,7 @@ export default function GoogleCalendarSync() {
           ) : (
             <Button
               onClick={handleSync}
-              disabled={isSyncing || syncTasksMutation.isPending}
+              disabled={isSyncing || syncTasksMutation.isPending || FEATURE_DISABLED}
               className="w-full"
             >
               {isSyncing || syncTasksMutation.isPending ? (
@@ -223,7 +261,9 @@ export default function GoogleCalendarSync() {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Only tasks with due dates that are not completed will be synced to your calendar.
+          {FEATURE_DISABLED 
+            ? "This feature will sync tasks with due dates to your calendar once enabled."
+            : "Only tasks with due dates that are not completed will be synced to your calendar."}
         </p>
       </CardContent>
     </Card>
