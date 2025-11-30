@@ -1,7 +1,7 @@
 import { useLists } from "@/hooks/use-lists";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Inbox, Trash2, FolderOpen, BarChart3, Settings } from "lucide-react";
+import { Plus, Inbox, Trash2, FolderOpen, BarChart3, Settings, Shield } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -101,6 +101,8 @@ export default function Sidebar({
     }
   };
 
+  const isAdmin = user?.role === "admin";
+
   return (
     <>
       <div className="flex flex-col h-full border-r bg-muted/30">
@@ -170,6 +172,20 @@ export default function Sidebar({
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
+
+            {isAdmin && (
+              <>
+                <Separator className="my-2" />
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start text-banana-600 hover:text-banana-700 hover:bg-banana-500/10"
+                  onClick={() => navigate("/admin")}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin Dashboard
+                </Button>
+              </>
+            )}
           </div>
         </ScrollArea>
       </div>

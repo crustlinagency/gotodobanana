@@ -14,9 +14,6 @@ export default function StatsWidget({
   overdueTasks,
   todayTasks,
 }: StatsWidgetProps) {
-  const completionRate =
-    totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
   const stats = [
     {
       label: "Total Tasks",
@@ -49,16 +46,18 @@ export default function StatsWidget({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-2 gap-3">
       {stats.map((stat, index) => (
-        <Card key={index} className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className={`${stat.bgColor} p-2 rounded-lg ${stat.color}`}>
+        <Card key={index} className="p-3">
+          <div className="flex items-center gap-3">
+            <div className={`${stat.bgColor} p-2 rounded-lg ${stat.color} shrink-0`}>
               {stat.icon}
             </div>
+            <div className="min-w-0">
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-xs text-muted-foreground truncate">{stat.label}</div>
+            </div>
           </div>
-          <div className="text-2xl font-bold">{stat.value}</div>
-          <div className="text-sm text-muted-foreground">{stat.label}</div>
         </Card>
       ))}
     </div>
