@@ -2,11 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User } from "@/entities";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Plus, Moon, Sun } from "lucide-react";
+import { Search, Plus, Moon, Sun, Settings } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import NotificationBell from "./NotificationBell";
 import { useTheme } from "@/hooks/use-theme";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DashboardHeaderProps {
     onNewTask: () => void;
@@ -17,6 +22,7 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({ onNewTask, onSearch, onNotificationTaskClick }: DashboardHeaderProps) {
     const { isDark, toggleTheme } = useTheme();
     const [searchQuery, setSearchQuery] = useState("");
+    const navigate = useNavigate();
 
     const { data: user } = useQuery({
         queryKey: ["user"],
@@ -76,6 +82,21 @@ export default function DashboardHeader({ onNewTask, onSearch, onNotificationTas
                     <NotificationBell 
                         onTaskClick={onNotificationTaskClick || (() => {})} 
                     />
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => navigate("/settings")}
+                            >
+                                <Settings className="h-5 w-5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            Settings
+                        </TooltipContent>
+                    </Tooltip>
 
                     <Button variant="ghost" size="icon" onClick={toggleTheme}>
                         {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}

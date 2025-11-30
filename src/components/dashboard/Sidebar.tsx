@@ -1,7 +1,7 @@
 import { useLists } from "@/hooks/use-lists";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Inbox, Trash2, FolderOpen } from "lucide-react";
+import { Plus, Inbox, Trash2, FolderOpen, BarChart3, Settings } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { List, User } from "@/entities";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { Separator } from "@/components/ui/separator";
 
 interface SidebarProps {
   selectedListId: string | null;
@@ -33,6 +35,7 @@ export default function Sidebar({
   const [newListName, setNewListName] = useState("");
   const [newListDescription, setNewListDescription] = useState("");
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: user } = useQuery({
     queryKey: ["user"],
@@ -51,7 +54,7 @@ export default function Sidebar({
         const { Task } = await import("@/entities");
         const result = await Task.filter({ 
           deleted: true,
-          userId: user.id // CRITICAL: Filter by userId
+          userId: user.id
         });
         return result?.length || 0;
       } catch (error) {
@@ -70,7 +73,7 @@ export default function Sidebar({
 
       console.log("✅ SECURITY: Creating list with userId:", user.id);
       return await List.create({
-        userId: user.id, // CRITICAL: Use userId
+        userId: user.id,
         name: newListName,
         description: newListDescription,
         color: "#FFD93D",
@@ -146,6 +149,26 @@ export default function Sidebar({
                   {deletedTasksCount}
                 </span>
               )}
+            </Button>
+
+            <Separator className="my-2" />
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => navigate("/analytics")}
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Analytics
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start"
+              onClick={() => navigate("/settings")}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Settings
             </Button>
           </div>
         </ScrollArea>
