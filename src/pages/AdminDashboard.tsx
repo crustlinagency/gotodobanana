@@ -34,7 +34,7 @@ export default function AdminDashboard() {
     }, [user, isLoading]);
 
     useEffect(() => {
-        if (user && user.role !== "admin") {
+        if (user && user.role !== "administrator") {
             navigate("/dashboard");
         }
     }, [user, navigate]);
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
         );
     }
 
-    if (!user || user.role !== "admin") {
+    if (!user || user.role !== "administrator") {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Alert variant="destructive" className="max-w-md">

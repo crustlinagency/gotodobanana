@@ -101,7 +101,7 @@ export default function Sidebar({
     }
   };
 
-  const isAdmin = user?.role === "admin";
+  const isAdmin = user?.role === "administrator";
 
   return (
     <>
