@@ -1,7 +1,11 @@
 {
   "name": "Tag",
-  "description": "A tag for categorizing tasks",
+  "description": "A tag for categorizing tasks with visibility controls",
   "properties": {
+    "userId": {
+      "type": "string",
+      "description": "ID of the user who created this tag (references User.id), null for global tags"
+    },
     "name": {
       "type": "string",
       "description": "Name of the tag"
@@ -9,6 +13,11 @@
     "color": {
       "type": "string",
       "description": "Color code for the tag (hex format)"
+    },
+    "visibility": {
+      "type": "string",
+      "description": "Tag visibility: global (all users), private (only owner), team (for future team feature)",
+      "default": "private"
     }
   }
 }

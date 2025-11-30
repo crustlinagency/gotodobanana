@@ -2,6 +2,10 @@
   "name": "Attachment",
   "description": "A file attachment for a task",
   "properties": {
+    "userId": {
+      "type": "string",
+      "description": "ID of the user who owns this attachment (references User.id)"
+    },
     "taskId": {
       "type": "string",
       "description": "ID of the task this attachment belongs to"

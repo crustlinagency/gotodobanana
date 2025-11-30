@@ -2,6 +2,10 @@
   "name": "FilterPreset",
   "description": "Saved filter configurations for quick access",
   "properties": {
+    "userId": {
+      "type": "string",
+      "description": "ID of the user who owns this filter preset (references User.id)"
+    },
     "name": {
       "type": "string",
       "description": "Name of the filter preset"

@@ -2,6 +2,10 @@
   "name": "List",
   "description": "A list or project containing tasks",
   "properties": {
+    "userId": {
+      "type": "string",
+      "description": "ID of the user who owns this list (references User.id)"
+    },
     "name": {
       "type": "string",
       "description": "Name of the list"

@@ -6,29 +6,27 @@ export function useTasks(listId?: string | null, searchQuery?: string) {
     queryKey: ["tasks", listId, searchQuery],
     queryFn: async () => {
       try {
-        // Get current user to filter by their email
         const user = await User.me();
-        if (!user?.email) {
-          console.error("No authenticated user found");
+        if (!user?.id) {
+          console.error("❌ SECURITY: No authenticated user found");
           return [];
         }
 
-        console.log("Fetching tasks for user:", user.email);
+        console.log("✅ SECURITY: Fetching tasks for userId:", user.id);
         
         let tasks;
         
         if (listId) {
           tasks = await Task.filter({ 
             listId,
-            created_by: user.email // CRITICAL: Filter by current user
+            userId: user.id // CRITICAL: Filter by userId not email
           }, "-created_at");
         } else {
           tasks = await Task.filter({ 
-            created_by: user.email // CRITICAL: Filter by current user
+            userId: user.id // CRITICAL: Filter by userId not email
           }, "-created_at");
         }
 
-        // Apply search filter
         if (searchQuery && searchQuery.trim()) {
           const query = searchQuery.toLowerCase();
           tasks = tasks.filter((task: any) =>
@@ -38,10 +36,10 @@ export function useTasks(listId?: string | null, searchQuery?: string) {
           );
         }
 
-        console.log(`Found ${tasks?.length || 0} tasks for user ${user.email}`);
+        console.log(`✅ SECURITY: Found ${tasks?.length || 0} tasks for user ${user.id}`);
         return tasks || [];
       } catch (error) {
-        console.error("Error fetching tasks:", error);
+        console.error("❌ SECURITY: Error fetching tasks:", error);
         return [];
       }
     },

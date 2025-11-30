@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { List, Task, User } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Inbox, Trash2, BarChart3 } from "lucide-react";
+import { Plus, Inbox, Trash2, BarChart3, Settings } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
@@ -32,21 +32,21 @@ export default function Sidebar({
     queryFn: async () => {
       try {
         const user = await User.me();
-        if (!user?.email) {
-          console.error("No authenticated user found");
+        if (!user?.id) {
+          console.error("❌ SECURITY: No authenticated user found");
           return [];
         }
 
-        console.log("Fetching lists for user:", user.email);
+        console.log("✅ SECURITY: Fetching lists for userId:", user.id);
         const result = await List.filter({ 
           archived: false,
-          created_by: user.email // CRITICAL: Filter by current user
+          userId: user.id // CRITICAL: Filter by userId
         }, "-created_at");
         
-        console.log(`Found ${result?.length || 0} lists`);
+        console.log(`✅ SECURITY: Found ${result?.length || 0} lists for user ${user.id}`);
         return result || [];
       } catch (error) {
-        console.error("Error fetching lists:", error);
+        console.error("❌ SECURITY: Error fetching lists:", error);
         throw error;
       }
     },
@@ -57,19 +57,19 @@ export default function Sidebar({
     queryFn: async () => {
       try {
         const user = await User.me();
-        if (!user?.email) {
-          console.error("No authenticated user found");
+        if (!user?.id) {
+          console.error("❌ SECURITY: No authenticated user found");
           return 0;
         }
 
         const result = await Task.filter({ 
           deleted: true,
-          created_by: user.email // CRITICAL: Filter by current user
+          userId: user.id // CRITICAL: Filter by userId
         });
         
         return result?.length || 0;
       } catch (error) {
-        console.error("Error fetching deleted tasks count:", error);
+        console.error("❌ SECURITY: Error fetching deleted tasks count:", error);
         return 0;
       }
     },
@@ -77,12 +77,18 @@ export default function Sidebar({
 
   const createListMutation = useMutation({
     mutationFn: async (name: string) => {
+      const user = await User.me();
+      if (!user?.id) {
+        throw new Error("Not authenticated");
+      }
+
       const colors = ["#FFD93D", "#8B5CF6", "#06B6D4", "#F59E0B", "#EF4444", "#10B981"];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
       
-      console.log("Creating list with name:", name);
+      console.log("✅ SECURITY: Creating list for userId:", user.id);
       
       const newList = await List.create({
+        userId: user.id, // CRITICAL: Set owner
         name,
         description: "",
         color: randomColor,
@@ -90,7 +96,7 @@ export default function Sidebar({
         order: lists.length,
       });
       
-      console.log("List created successfully:", newList);
+      console.log("✅ SECURITY: List created successfully:", newList.id);
       return newList;
     },
     onSuccess: (data) => {
@@ -115,6 +121,21 @@ export default function Sidebar({
 
   const deleteListMutation = useMutation({
     mutationFn: async (listId: string) => {
+      // CRITICAL: Verify list ownership before delete
+      const user = await User.me();
+      if (!user?.id) {
+        throw new Error("Not authenticated");
+      }
+
+      const existingList = await List.filter({ 
+        id: listId, 
+        userId: user.id // CRITICAL: Verify ownership
+      });
+
+      if (!existingList || existingList.length === 0) {
+        throw new Error("List not found or access denied");
+      }
+
       await List.delete(listId);
     },
     onSuccess: () => {
@@ -128,11 +149,11 @@ export default function Sidebar({
         description: "List deleted successfully!",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error deleting list:", error);
       toast({
         title: "Error",
-        description: "Failed to delete list. Please try again.",
+        description: error.message || "Failed to delete list. Please try again.",
         variant: "destructive",
       });
     },
@@ -150,47 +171,107 @@ export default function Sidebar({
   }
 
   return (
-    <div className="w-64 border-r bg-muted/30 flex flex-col h-full">
-      <div className="p-4 border-b">
-        <h2 className="font-semibold text-lg mb-4">Lists</h2>
+    <aside className="w-64 border-r bg-background p-4 flex flex-col h-full">
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold mb-4">Lists</h2>
         
-        {/* All Tasks */}
-        <Button
-          variant={selectedListId === null && !isTrashSelected ? "secondary" : "ghost"}
-          className="w-full justify-start mb-2"
-          onClick={() => onSelectList(null)}
-        >
-          <Inbox className="h-4 w-4 mr-2" />
-          All Tasks
-        </Button>
+        <div className="space-y-1">
+          <Button
+            variant={!selectedListId && !isTrashSelected ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => {
+              onSelectList(null);
+              if (onSelectTrash) onSelectTrash();
+            }}
+          >
+            <Inbox className="mr-2 h-4 w-4" />
+            All Tasks
+          </Button>
 
-        {/* Trash */}
-        <Button
-          variant={isTrashSelected ? "secondary" : "ghost"}
-          className="w-full justify-start mb-2"
-          onClick={onSelectTrash}
-        >
-          <Trash2 className="h-4 w-4 mr-2" />
-          Trash
-          {deletedCount > 0 && (
-            <Badge variant="destructive" className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs">
-              {deletedCount}
-            </Badge>
+          <Button
+            variant={isTrashSelected ? "secondary" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => {
+              if (onSelectTrash) {
+                onSelectTrash();
+              }
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Trash
+            {deletedCount > 0 && (
+              <Badge variant="destructive" className="ml-auto">
+                {deletedCount}
+              </Badge>
+            )}
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => navigate("/analytics")}
+          >
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Analytics
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => navigate("/settings")}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="space-y-1">
+          {listsLoading ? (
+            <div className="text-center py-4 text-sm text-muted-foreground">
+              Loading lists...
+            </div>
+          ) : lists.length === 0 && !isAddingList ? (
+            <div className="text-center py-4 text-sm text-muted-foreground">
+              No lists yet. Create your first list!
+            </div>
+          ) : (
+            lists.map((list) => (
+              <div key={list.id} className="group relative">
+                <Button
+                  variant={selectedListId === list.id ? "secondary" : "ghost"}
+                  className="w-full justify-start pr-8"
+                  onClick={() => onSelectList(list.id)}
+                >
+                  <div
+                    className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
+                    style={{ backgroundColor: list.color }}
+                  />
+                  <span className="truncate">{list.name}</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Delete "${list.name}"?`)) {
+                      deleteListMutation.mutate(list.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))
           )}
-        </Button>
+        </div>
+      </ScrollArea>
 
-        {/* Analytics */}
-        <Button
-          variant="ghost"
-          className="w-full justify-start mb-2"
-          onClick={() => navigate("/analytics")}
-        >
-          <BarChart3 className="h-4 w-4 mr-2" />
-          Analytics
-        </Button>
-
+      <div className="mt-4 pt-4 border-t">
         {isAddingList ? (
-          <div className="flex gap-2 mt-2">
+          <div className="space-y-2">
             <Input
               placeholder="List name"
               value={newListName}
@@ -203,74 +284,40 @@ export default function Sidebar({
                 }
               }}
               autoFocus
-              className="h-8"
             />
-            <Button 
-              size="sm" 
-              onClick={handleCreateList} 
-              disabled={!newListName.trim() || createListMutation.isPending}
-            >
-              {createListMutation.isPending ? "..." : "Add"}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                onClick={handleCreateList}
+                disabled={!newListName.trim()}
+                className="flex-1"
+              >
+                Create
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setIsAddingList(false);
+                  setNewListName("");
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
           </div>
         ) : (
           <Button
-            variant="ghost"
-            className="w-full justify-start"
+            variant="outline"
+            className="w-full"
             onClick={() => setIsAddingList(true)}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             New List
           </Button>
         )}
       </div>
-
-      <ScrollArea className="flex-1">
-        <div className="p-2 space-y-1">
-          {listsLoading && (
-            <div className="text-sm text-muted-foreground px-3 py-2">
-              Loading lists...
-            </div>
-          )}
-          {!listsLoading && lists.length === 0 && (
-            <div className="text-sm text-muted-foreground px-3 py-2">
-              No lists yet. Create one to get started!
-            </div>
-          )}
-          {lists.map((list) => (
-            <div
-              key={list.id}
-              className={`group flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent cursor-pointer ${
-                selectedListId === list.id && !isTrashSelected ? "bg-accent" : ""
-              }`}
-            >
-              <div
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: list.color }}
-              />
-              <span
-                className="flex-1 text-sm truncate"
-                onClick={() => onSelectList(list.id)}
-              >
-                {list.name}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(`Delete list "${list.name}"?`)) {
-                    deleteListMutation.mutate(list.id);
-                  }
-                }}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
+    </aside>
   );
 }

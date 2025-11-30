@@ -1,0 +1,20 @@
+{
+  "name": "User",
+  "description": "Extended user profile with role and preferences",
+  "properties": {
+    "role": {
+      "type": "string",
+      "description": "User role: user, premium, or admin",
+      "default": "user"
+    },
+    "tagVisibility": {
+      "type": "string",
+      "description": "Tag visibility preference: all (see global tags), private (only own tags), team (for future team feature)",
+      "default": "all"
+    },
+    "preferences": {
+      "type": "object",
+      "description": "User preferences and settings"
+    }
+  }
+}

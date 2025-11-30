@@ -2,6 +2,10 @@
   "name": "Subtask",
   "description": "A subtask within a parent task",
   "properties": {
+    "userId": {
+      "type": "string",
+      "description": "ID of the user who owns this subtask (references User.id)"
+    },
     "parentTaskId": {
       "type": "string",
       "description": "ID of the parent task"

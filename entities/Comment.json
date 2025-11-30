@@ -2,6 +2,10 @@
   "name": "Comment",
   "description": "A comment or note on a task",
   "properties": {
+    "userId": {
+      "type": "string",
+      "description": "ID of the user who created this comment (references User.id)"
+    },
     "taskId": {
       "type": "string",
       "description": "ID of the task this comment belongs to"

@@ -6,24 +6,23 @@ export function useLists() {
     queryKey: ["lists"],
     queryFn: async () => {
       try {
-        // Get current user to filter by their email
         const user = await User.me();
-        if (!user?.email) {
-          console.error("No authenticated user found");
+        if (!user?.id) {
+          console.error("❌ SECURITY: No authenticated user found");
           return [];
         }
 
-        console.log("Fetching lists for user:", user.email);
+        console.log("✅ SECURITY: Fetching lists for userId:", user.id);
         
         const lists = await List.filter({ 
           archived: false,
-          created_by: user.email // CRITICAL: Filter by current user
+          userId: user.id // CRITICAL: Filter by userId not email
         }, "-created_at");
         
-        console.log(`Found ${lists?.length || 0} lists for user ${user.email}`);
+        console.log(`✅ SECURITY: Found ${lists?.length || 0} lists for user ${user.id}`);
         return lists || [];
       } catch (error) {
-        console.error("Error fetching lists:", error);
+        console.error("❌ SECURITY: Error fetching lists:", error);
         return [];
       }
     },
