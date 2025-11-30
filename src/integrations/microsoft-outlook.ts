@@ -1,9 +1,30 @@
 // Microsoft Outlook/Office 365 Calendar Integration
 // Uses Microsoft Graph API for calendar operations
 
-const MICROSOFT_CLIENT_ID = import.meta.env.VITE_MICROSOFT_CLIENT_ID;
+import { getMicrosoftConfig } from "@/functions";
+
 const REDIRECT_URI = `${window.location.origin}/oauth/callback`;
 const SCOPES = "Calendars.ReadWrite User.Read";
+
+// Cache the client ID after first fetch
+let cachedClientId: string | null = null;
+
+async function getClientId(): Promise<string> {
+    if (cachedClientId) {
+        return cachedClientId;
+    }
+
+    try {
+        const response = await getMicrosoftConfig();
+        if (!response.clientId) {
+            throw new Error("Microsoft Client ID not configured in backend");
+        }
+        cachedClientId = response.clientId;
+        return cachedClientId;
+    } catch (error) {
+        throw new Error("Failed to get Microsoft Client ID. Please ensure VITE_MICROSOFT_CLIENT_ID is set in your backend secrets.");
+    }
+}
 
 export const microsoftOutlook = {
     calendar: {
@@ -11,12 +32,10 @@ export const microsoftOutlook = {
          * Initiate OAuth 2.0 authentication flow with Microsoft
          */
         authenticate: async () => {
-            if (!MICROSOFT_CLIENT_ID) {
-                throw new Error("Microsoft Client ID not configured. Please set VITE_MICROSOFT_CLIENT_ID.");
-            }
+            const clientId = await getClientId();
 
             const authUrl = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
-            authUrl.searchParams.append("client_id", MICROSOFT_CLIENT_ID);
+            authUrl.searchParams.append("client_id", clientId);
             authUrl.searchParams.append("response_type", "token");
             authUrl.searchParams.append("redirect_uri", REDIRECT_URI);
             authUrl.searchParams.append("scope", SCOPES);
