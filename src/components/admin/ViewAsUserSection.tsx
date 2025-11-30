@@ -9,10 +9,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Eye, UserCheck, Info } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function ViewAsUserSection() {
     const [selectedUserId, setSelectedUserId] = useState<string>("");
     const [searchQuery, setSearchQuery] = useState("");
+    const navigate = useNavigate();
 
     const { data: users = [] } = useQuery({
         queryKey: ["allUsers"],
@@ -47,7 +49,18 @@ export default function ViewAsUserSection() {
             toast.error("Please select a user first");
             return;
         }
-        toast.info(`Viewing data for ${selectedUser?.full_name || selectedUser?.email}`);
+        
+        // Store the view-as-user data in localStorage
+        localStorage.setItem("viewAsUser", JSON.stringify({
+            userId: selectedUserId,
+            userName: selectedUser?.full_name || selectedUser?.email,
+            userEmail: selectedUser?.email
+        }));
+        
+        toast.success(`Now viewing dashboard as ${selectedUser?.full_name || selectedUser?.email}`);
+        
+        // Navigate to dashboard
+        navigate("/dashboard");
     };
 
     return (

@@ -17,6 +17,7 @@ import FocusMode from "@/components/dashboard/FocusMode";
 import TrashView from "@/components/dashboard/TrashView";
 import WidgetsSidebar from "@/components/dashboard/WidgetsSidebar";
 import Breadcrumb from "@/components/dashboard/Breadcrumb";
+import ViewAsUserBanner from "@/components/dashboard/ViewAsUserBanner";
 import Footer from "@/components/Footer";
 import { useNavigate } from "react-router-dom";
 import { Loader2, Keyboard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
@@ -55,10 +56,33 @@ export default function Dashboard() {
         tags: undefined as string[] | undefined,
         lists: undefined as string[] | undefined,
     });
+    const [viewAsUserData, setViewAsUserData] = useState<any>(null);
 
     const navigate = useNavigate();
     const { data: lists = [] } = useLists();
     const { data: user, isLoading: userLoading } = useUser();
+
+    // Check if admin is viewing as another user
+    useEffect(() => {
+        const viewAsUserJson = localStorage.getItem("viewAsUser");
+        if (viewAsUserJson) {
+            try {
+                const data = JSON.parse(viewAsUserJson);
+                setViewAsUserData(data);
+            } catch (error) {
+                console.error("Error parsing viewAsUser data:", error);
+            }
+        }
+    }, []);
+
+    const handleExitViewAsUser = () => {
+        localStorage.removeItem("viewAsUser");
+        setViewAsUserData(null);
+        toast.info("Exited view-as-user mode");
+    };
+
+    // Use viewAsUser ID if available, otherwise use current user ID
+    const effectiveUserId = viewAsUserData?.userId || user?.id;
 
     useEffect(() => {
         localStorage.setItem("leftSidebarOpen", JSON.stringify(isLeftSidebarOpen));
@@ -69,27 +93,27 @@ export default function Dashboard() {
     }, [isRightSidebarOpen]);
 
     const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-        queryKey: ["tasks", selectedListId, searchQuery, filters, user?.id],
+        queryKey: ["tasks", selectedListId, searchQuery, filters, effectiveUserId],
         queryFn: async () => {
             try {
-                if (!user?.id) {
-                    console.error("❌ SECURITY: No authenticated user");
+                if (!effectiveUserId) {
+                    console.error("❌ SECURITY: No user ID available");
                     return [];
                 }
 
-                console.log("✅ SECURITY: Fetching tasks for userId:", user.id);
+                console.log("✅ SECURITY: Fetching tasks for userId:", effectiveUserId);
                 let result;
                 
                 if (selectedListId) {
                     result = await Task.filter({ 
                         listId: selectedListId,
                         deleted: false,
-                        userId: user.id // CRITICAL: Filter by userId
+                        userId: effectiveUserId
                     }, filters.sortBy);
                 } else {
                     result = await Task.filter({ 
                         deleted: false,
-                        userId: user.id // CRITICAL: Filter by userId
+                        userId: effectiveUserId
                     }, filters.sortBy);
                 }
 
@@ -172,7 +196,7 @@ export default function Dashboard() {
                 return [];
             }
         },
-        enabled: !!user && !isTrashSelected,
+        enabled: !!effectiveUserId && !isTrashSelected,
     });
 
     const displayTasks = isFocusMode
@@ -346,12 +370,24 @@ export default function Dashboard() {
                 <main className="flex-1 overflow-auto flex flex-col">
                     {isTrashSelected ? (
                         <div className="p-6 flex-1">
+                            {viewAsUserData && (
+                                <ViewAsUserBanner 
+                                    userName={viewAsUserData.userName}
+                                    onExit={handleExitViewAsUser}
+                                />
+                            )}
                             <Breadcrumb items={getBreadcrumbItems()} />
                             <TrashView />
                         </div>
                     ) : (
                         <div className="flex h-full flex-1">
                             <div className="flex-1 p-6 overflow-auto flex flex-col">
+                                {viewAsUserData && (
+                                    <ViewAsUserBanner 
+                                        userName={viewAsUserData.userName}
+                                        onExit={handleExitViewAsUser}
+                                    />
+                                )}
                                 <Breadcrumb items={getBreadcrumbItems()} />
                                 
                                 <div className="mb-6">
@@ -514,15 +550,14 @@ export default function Dashboard() {
                 </main>
             </div>
 
-            <TaskForm
-                open={isTaskFormOpen}
-                onClose={() => {
-                    setIsTaskFormOpen(false);
-                    setEditingTask(null);
-                }}
-                task={editingTask}
-                defaultListId={selectedListId || undefined}
-            />
+            {isTaskFormOpen && (
+                <TaskForm
+                    open={isTaskFormOpen}
+                    onOpenChange={setIsTaskFormOpen}
+                    task={editingTask}
+                    onSuccess={() => setIsTaskFormOpen(false)}
+                />
+            )}
         </div>
     );
 }
