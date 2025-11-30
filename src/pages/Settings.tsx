@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User } from "@/entities";
+import { User, Task, Comment, Attachment, Subtask, List, Tag, FilterPreset } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
@@ -12,12 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Save, AlertCircle, Shield } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, Shield, Database, RefreshCw, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Settings() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const [isCleaningDatabase, setIsCleaningDatabase] = useState(false);
+    const [cleanupResults, setCleanupResults] = useState<any>(null);
     
     const { data: user, isLoading } = useQuery({
         queryKey: ["user"],
@@ -70,6 +72,114 @@ export default function Settings() {
         }
     };
 
+    const handleDatabaseCleanup = async () => {
+        if (!user?.id) {
+            toast.error("You must be logged in to run database cleanup");
+            return;
+        }
+
+        setIsCleaningDatabase(true);
+        const results = {
+            tasks: 0,
+            comments: 0,
+            attachments: 0,
+            subtasks: 0,
+            lists: 0,
+            tags: 0,
+            filterPresets: 0,
+            users: 0,
+        };
+
+        try {
+            console.log("🔧 CLEANUP: Starting database cleanup for userId:", user.id);
+
+            // Fix Tasks with NULL userId
+            const tasksWithoutUserId = await Task.list();
+            for (const task of tasksWithoutUserId) {
+                if (!task.userId && task.created_by === user.email) {
+                    await Task.update(task.id, { userId: user.id });
+                    results.tasks++;
+                }
+            }
+
+            // Fix Comments with NULL userId
+            const commentsWithoutUserId = await Comment.list();
+            for (const comment of commentsWithoutUserId) {
+                if (!comment.userId && comment.created_by === user.email) {
+                    await Comment.update(comment.id, { userId: user.id });
+                    results.comments++;
+                }
+            }
+
+            // Fix Attachments with NULL userId
+            const attachmentsWithoutUserId = await Attachment.list();
+            for (const attachment of attachmentsWithoutUserId) {
+                if (!attachment.userId && attachment.created_by === user.email) {
+                    await Attachment.update(attachment.id, { userId: user.id });
+                    results.attachments++;
+                }
+            }
+
+            // Fix Subtasks with NULL userId
+            const subtasksWithoutUserId = await Subtask.list();
+            for (const subtask of subtasksWithoutUserId) {
+                if (!subtask.userId && subtask.created_by === user.email) {
+                    await Subtask.update(subtask.id, { userId: user.id });
+                    results.subtasks++;
+                }
+            }
+
+            // Fix Lists with NULL userId
+            const listsWithoutUserId = await List.list();
+            for (const list of listsWithoutUserId) {
+                if (!list.userId && list.created_by === user.email) {
+                    await List.update(list.id, { userId: user.id });
+                    results.lists++;
+                }
+            }
+
+            // Fix Tags with NULL userId (only for private tags)
+            const tagsWithoutUserId = await Tag.list();
+            for (const tag of tagsWithoutUserId) {
+                if (!tag.userId && tag.created_by === user.email && tag.visibility !== "global") {
+                    await Tag.update(tag.id, { userId: user.id });
+                    results.tags++;
+                }
+            }
+
+            // Fix FilterPresets with NULL userId
+            const presetsWithoutUserId = await FilterPreset.list();
+            for (const preset of presetsWithoutUserId) {
+                if (!preset.userId && preset.created_by === user.email) {
+                    await FilterPreset.update(preset.id, { userId: user.id });
+                    results.filterPresets++;
+                }
+            }
+
+            // Fix User role if NULL
+            if (!user.role) {
+                await User.updateProfile({ role: "user" });
+                results.users++;
+            }
+
+            console.log("✅ CLEANUP: Database cleanup completed", results);
+            setCleanupResults(results);
+            
+            const totalFixed = Object.values(results).reduce((sum: number, val: number) => sum + val, 0);
+            if (totalFixed > 0) {
+                toast.success(`Database cleanup complete! Fixed ${totalFixed} records.`);
+                queryClient.invalidateQueries();
+            } else {
+                toast.info("No records needed fixing. Database is clean!");
+            }
+        } catch (error) {
+            console.error("❌ CLEANUP: Error during database cleanup:", error);
+            toast.error("Database cleanup failed. Please try again.");
+        } finally {
+            setIsCleaningDatabase(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -105,6 +215,67 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-6">
+                    {/* Database Cleanup Section */}
+                    <Card className="border-banana-500/20">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Database className="h-5 w-5 text-banana-500" />
+                                <CardTitle>Database Cleanup</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Fix any missing user data and ensure all your records are properly associated with your account
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <Alert>
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>What does this do?</AlertTitle>
+                                <AlertDescription>
+                                    This tool will scan all your data (tasks, lists, comments, attachments, etc.) 
+                                    and fix any records that are missing proper user ownership information. 
+                                    This ensures maximum security and data isolation.
+                                </AlertDescription>
+                            </Alert>
+
+                            <Button
+                                onClick={handleDatabaseCleanup}
+                                disabled={isCleaningDatabase}
+                                className="w-full bg-banana-500 hover:bg-banana-600 text-black"
+                            >
+                                {isCleaningDatabase ? (
+                                    <>
+                                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                        Cleaning Database...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Database className="h-4 w-4 mr-2" />
+                                        Run Database Cleanup
+                                    </>
+                                )}
+                            </Button>
+
+                            {cleanupResults && (
+                                <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <CheckCircle className="h-5 w-5 text-green-500" />
+                                        <span className="font-semibold">Cleanup Results</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div>Tasks fixed: <strong>{cleanupResults.tasks}</strong></div>
+                                        <div>Comments fixed: <strong>{cleanupResults.comments}</strong></div>
+                                        <div>Attachments fixed: <strong>{cleanupResults.attachments}</strong></div>
+                                        <div>Subtasks fixed: <strong>{cleanupResults.subtasks}</strong></div>
+                                        <div>Lists fixed: <strong>{cleanupResults.lists}</strong></div>
+                                        <div>Tags fixed: <strong>{cleanupResults.tags}</strong></div>
+                                        <div>Filter presets fixed: <strong>{cleanupResults.filterPresets}</strong></div>
+                                        <div>User profile fixed: <strong>{cleanupResults.users}</strong></div>
+                                    </div>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
                     {/* Profile Settings */}
                     <Card>
                         <CardHeader>

@@ -69,31 +69,31 @@ export default function Dashboard() {
     }, [isRightSidebarOpen]);
 
     const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-        queryKey: ["tasks", selectedListId, searchQuery, filters, user?.email],
+        queryKey: ["tasks", selectedListId, searchQuery, filters, user?.id],
         queryFn: async () => {
             try {
-                if (!user?.email) {
-                    console.error("No authenticated user");
+                if (!user?.id) {
+                    console.error("❌ SECURITY: No authenticated user");
                     return [];
                 }
 
-                console.log("Fetching tasks for user:", user.email);
+                console.log("✅ SECURITY: Fetching tasks for userId:", user.id);
                 let result;
                 
                 if (selectedListId) {
                     result = await Task.filter({ 
                         listId: selectedListId,
                         deleted: false,
-                        created_by: user.email // CRITICAL: Filter by current user
+                        userId: user.id // CRITICAL: Filter by userId
                     }, filters.sortBy);
                 } else {
                     result = await Task.filter({ 
                         deleted: false,
-                        created_by: user.email // CRITICAL: Filter by current user
+                        userId: user.id // CRITICAL: Filter by userId
                     }, filters.sortBy);
                 }
 
-                console.log("Tasks fetched from database:", result?.length || 0);
+                console.log("✅ SECURITY: Tasks fetched:", result?.length || 0);
 
                 let filteredTasks = result || [];
 
@@ -165,10 +165,10 @@ export default function Dashboard() {
                     });
                 }
 
-                console.log("Final filtered tasks:", filteredTasks.length, "tasks");
+                console.log("✅ SECURITY: Final filtered tasks:", filteredTasks.length);
                 return filteredTasks;
             } catch (error) {
-                console.error("Error fetching tasks:", error);
+                console.error("❌ SECURITY: Error fetching tasks:", error);
                 return [];
             }
         },
@@ -178,8 +178,6 @@ export default function Dashboard() {
     const displayTasks = isFocusMode
         ? tasks.filter((task: any) => task.priority === "High" && !task.completed)
         : tasks;
-
-    // useUser hook now handles the redirect, so we don't need this effect
 
     useKeyboardShortcuts({
         onNewTask: () => {
@@ -274,7 +272,6 @@ export default function Dashboard() {
         setSelectedListId(null);
     };
 
-    // Generate breadcrumb items based on current view
     const getBreadcrumbItems = () => {
         const items = [];
         
