@@ -16,6 +16,13 @@ const queryClient = new QueryClient({
         queries: {
             retry: 1,
             refetchOnWindowFocus: false,
+            staleTime: 1000,
+        },
+        mutations: {
+            retry: 0,
+            onError: (error) => {
+                console.error("Mutation error:", error);
+            },
         },
     },
 });

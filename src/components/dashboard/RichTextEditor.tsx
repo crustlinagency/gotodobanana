@@ -18,11 +18,12 @@ import {
 
 interface RichTextEditorProps {
     content: string;
-    onChange: (content: string) => void;
+    onChange?: (content: string) => void;
     placeholder?: string;
+    readOnly?: boolean;
 }
 
-export default function RichTextEditor({ content, onChange, placeholder }: RichTextEditorProps) {
+export default function RichTextEditor({ content, onChange, placeholder, readOnly = false }: RichTextEditorProps) {
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
@@ -41,8 +42,11 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
             }),
         ],
         content: content,
+        editable: !readOnly,
         onUpdate: ({ editor }) => {
-            onChange(editor.getHTML());
+            if (onChange && !readOnly) {
+                onChange(editor.getHTML());
+            }
         },
         editorProps: {
             attributes: {
@@ -57,6 +61,12 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
         }
     }, [content, editor]);
 
+    useEffect(() => {
+        if (editor) {
+            editor.setEditable(!readOnly);
+        }
+    }, [readOnly, editor]);
+
     if (!editor) {
         return null;
     }
@@ -67,6 +77,14 @@ export default function RichTextEditor({ content, onChange, placeholder }: RichT
             editor.chain().focus().setLink({ href: url }).run();
         }
     };
+
+    if (readOnly) {
+        return (
+            <div className="border rounded-lg overflow-hidden">
+                <EditorContent editor={editor} />
+            </div>
+        );
+    }
 
     return (
         <div className="border rounded-lg overflow-hidden">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { ArrowLeft, Save, AlertCircle, Shield } from "lucide-react";
+import { ArrowLeft, Save, AlertCircle, Shield, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Settings() {
@@ -30,9 +30,17 @@ export default function Settings() {
         },
     });
 
-    const [fullName, setFullName] = useState(user?.full_name || "");
-    const [email, setEmail] = useState(user?.email || "");
-    const [tagVisibility, setTagVisibility] = useState(user?.tagVisibility || "all");
+    const [fullName, setFullName] = useState("");
+    const [email, setEmail] = useState("");
+    const [tagVisibility, setTagVisibility] = useState("all");
+
+    useEffect(() => {
+        if (user) {
+            setFullName(user.full_name || "");
+            setEmail(user.email || "");
+            setTagVisibility(user.tagVisibility || "all");
+        }
+    }, [user]);
 
     const updateProfileMutation = useMutation({
         mutationFn: async (data: any) => {
@@ -49,6 +57,8 @@ export default function Settings() {
     });
 
     const handleSave = () => {
+        if (updateProfileMutation.isPending) return;
+
         const updates: any = {};
         
         if (fullName !== user?.full_name) {
@@ -74,7 +84,7 @@ export default function Settings() {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-banana-500 mx-auto"></div>
+                    <Loader2 className="h-12 w-12 animate-spin text-banana-600 mx-auto" />
                     <p className="mt-4 text-muted-foreground">Loading settings...</p>
                 </div>
             </div>
@@ -93,6 +103,7 @@ export default function Settings() {
                         variant="ghost"
                         onClick={() => navigate("/dashboard")}
                         className="mb-4"
+                        disabled={updateProfileMutation.isPending}
                     >
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         Back to Dashboard
@@ -105,7 +116,6 @@ export default function Settings() {
                 </div>
 
                 <div className="space-y-6">
-                    {/* Profile Settings */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Profile Information</CardTitle>
@@ -121,6 +131,7 @@ export default function Settings() {
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
                                     placeholder="Your full name"
+                                    disabled={updateProfileMutation.isPending}
                                 />
                             </div>
 
@@ -132,7 +143,7 @@ export default function Settings() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="your.email@example.com"
-                                    disabled={isGoogleAuth}
+                                    disabled={isGoogleAuth || updateProfileMutation.isPending}
                                 />
                                 {isGoogleAuth && (
                                     <p className="text-xs text-muted-foreground">
@@ -144,8 +155,8 @@ export default function Settings() {
                             <div className="space-y-2">
                                 <Label>Account Role</Label>
                                 <div className="flex items-center gap-2">
-                                    <Badge variant={user?.role === "admin" ? "destructive" : user?.role === "premium" ? "default" : "secondary"}>
-                                        {user?.role === "admin" ? "Administrator" : user?.role === "premium" ? "Premium User" : "Free User"}
+                                    <Badge variant={user?.role === "administrator" ? "destructive" : user?.role === "premium" ? "default" : "secondary"}>
+                                        {user?.role === "administrator" ? "Administrator" : user?.role === "premium" ? "Premium User" : "Free User"}
                                     </Badge>
                                     {user?.role === "user" && (
                                         <span className="text-sm text-muted-foreground">
@@ -157,7 +168,6 @@ export default function Settings() {
                         </CardContent>
                     </Card>
 
-                    {/* Tag Visibility Settings */}
                     <Card>
                         <CardHeader>
                             <div className="flex items-center gap-2">
@@ -171,7 +181,11 @@ export default function Settings() {
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="tagVisibility">Tag Visibility</Label>
-                                <Select value={tagVisibility} onValueChange={setTagVisibility}>
+                                <Select 
+                                    value={tagVisibility} 
+                                    onValueChange={setTagVisibility}
+                                    disabled={updateProfileMutation.isPending}
+                                >
                                     <SelectTrigger id="tagVisibility">
                                         <SelectValue />
                                     </SelectTrigger>
@@ -203,7 +217,6 @@ export default function Settings() {
                         </CardContent>
                     </Card>
 
-                    {/* User ID Info (for debugging/reference) */}
                     <Card>
                         <CardHeader>
                             <CardTitle>Account Information</CardTitle>
@@ -226,11 +239,11 @@ export default function Settings() {
                         </CardContent>
                     </Card>
 
-                    {/* Save Button */}
                     <div className="flex justify-end gap-2">
                         <Button
                             variant="outline"
                             onClick={() => navigate("/dashboard")}
+                            disabled={updateProfileMutation.isPending}
                         >
                             Cancel
                         </Button>
@@ -239,8 +252,17 @@ export default function Settings() {
                             disabled={updateProfileMutation.isPending}
                             className="bg-banana-500 hover:bg-banana-600 text-black"
                         >
-                            <Save className="h-4 w-4 mr-2" />
-                            {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+                            {updateProfileMutation.isPending ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="h-4 w-4 mr-2" />
+                                    Save Changes
+                                </>
+                            )}
                         </Button>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 import { useLists } from "@/hooks/use-lists";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Inbox, Trash2, FolderOpen, BarChart3, Settings, Shield } from "lucide-react";
+import { Plus, Inbox, Trash2, FolderOpen, BarChart3, Settings, Shield, Loader2 } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -96,8 +96,16 @@ export default function Sidebar({
 
   const handleCreateList = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newListName.trim()) {
+    if (newListName.trim() && !createListMutation.isPending) {
       createListMutation.mutate();
+    }
+  };
+
+  const handleCloseDialog = () => {
+    if (!createListMutation.isPending) {
+      setNewListName("");
+      setNewListDescription("");
+      setIsNewListDialogOpen(false);
     }
   };
 
@@ -110,6 +118,7 @@ export default function Sidebar({
           <Button
             onClick={() => setIsNewListDialogOpen(true)}
             className="w-full bg-banana-500 hover:bg-banana-600 text-black"
+            disabled={createListMutation.isPending}
           >
             <Plus className="h-4 w-4 mr-2" />
             New List
@@ -190,7 +199,11 @@ export default function Sidebar({
         </ScrollArea>
       </div>
 
-      <Dialog open={isNewListDialogOpen} onOpenChange={setIsNewListDialogOpen}>
+      <Dialog open={isNewListDialogOpen} onOpenChange={(open) => {
+        if (!open && !createListMutation.isPending) {
+          handleCloseDialog();
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New List</DialogTitle>
@@ -204,6 +217,7 @@ export default function Sidebar({
                 onChange={(e) => setNewListName(e.target.value)}
                 placeholder="e.g., Work, Personal, Shopping"
                 required
+                disabled={createListMutation.isPending}
               />
             </div>
             <div>
@@ -213,13 +227,15 @@ export default function Sidebar({
                 value={newListDescription}
                 onChange={(e) => setNewListDescription(e.target.value)}
                 placeholder="Optional description"
+                disabled={createListMutation.isPending}
               />
             </div>
             <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsNewListDialogOpen(false)}
+                onClick={handleCloseDialog}
+                disabled={createListMutation.isPending}
               >
                 Cancel
               </Button>
@@ -228,7 +244,14 @@ export default function Sidebar({
                 className="bg-banana-500 hover:bg-banana-600 text-black"
                 disabled={!newListName.trim() || createListMutation.isPending}
               >
-                Create List
+                {createListMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create List"
+                )}
               </Button>
             </div>
           </form>

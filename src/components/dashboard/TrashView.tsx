@@ -48,6 +48,7 @@ export default function TrashView() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
+            queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
             toast.success("Task restored successfully");
         },
         onError: (error: any) => {
@@ -65,6 +66,7 @@ export default function TrashView() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["deletedTasks"] });
             queryClient.invalidateQueries({ queryKey: ["tasks"] });
+            queryClient.invalidateQueries({ queryKey: ["deletedTasksCount"] });
             toast.success("Task permanently deleted from database");
             setIsDeleteDialogOpen(false);
             setTaskToDelete(null);
@@ -76,7 +78,9 @@ export default function TrashView() {
     });
 
     const handleRestore = (task: any) => {
-        restoreMutation.mutate(task);
+        if (!restoreMutation.isPending) {
+            restoreMutation.mutate(task);
+        }
     };
 
     const handlePermanentDelete = (task: any) => {
@@ -85,7 +89,7 @@ export default function TrashView() {
     };
 
     const confirmPermanentDelete = () => {
-        if (taskToDelete) {
+        if (taskToDelete && !permanentDeleteMutation.isPending) {
             permanentDeleteMutation.mutate(taskToDelete.id);
         }
     };
@@ -109,6 +113,8 @@ export default function TrashView() {
             </div>
         );
     }
+
+    const isAnyActionPending = restoreMutation.isPending || permanentDeleteMutation.isPending;
 
     return (
         <div className="space-y-6">
@@ -178,18 +184,26 @@ export default function TrashView() {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleRestore(task)}
-                                        disabled={restoreMutation.isPending}
+                                        disabled={isAnyActionPending}
                                     >
-                                        <RotateCcw className="h-4 w-4 mr-1" />
+                                        {restoreMutation.isPending ? (
+                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                        ) : (
+                                            <RotateCcw className="h-4 w-4 mr-1" />
+                                        )}
                                         Restore
                                     </Button>
                                     <Button
                                         variant="destructive"
                                         size="sm"
                                         onClick={() => handlePermanentDelete(task)}
-                                        disabled={permanentDeleteMutation.isPending}
+                                        disabled={isAnyActionPending}
                                     >
-                                        <Trash2 className="h-4 w-4 mr-1" />
+                                        {permanentDeleteMutation.isPending ? (
+                                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                        ) : (
+                                            <Trash2 className="h-4 w-4 mr-1" />
+                                        )}
                                         Delete Forever
                                     </Button>
                                 </div>
@@ -199,7 +213,12 @@ export default function TrashView() {
                 ))}
             </div>
 
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+                if (!open && !permanentDeleteMutation.isPending) {
+                    setIsDeleteDialogOpen(false);
+                    setTaskToDelete(null);
+                }
+            }}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Permanently Delete Task?</AlertDialogTitle>
@@ -209,12 +228,22 @@ export default function TrashView() {
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel disabled={permanentDeleteMutation.isPending}>
+                            Cancel
+                        </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmPermanentDelete}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={permanentDeleteMutation.isPending}
                         >
-                            Delete Forever
+                            {permanentDeleteMutation.isPending ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Deleting...
+                                </>
+                            ) : (
+                                "Delete Forever"
+                            )}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
