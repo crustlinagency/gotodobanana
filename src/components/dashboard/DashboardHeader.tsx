@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { User } from "@/entities";
 import { useQuery } from "@tanstack/react-query";
@@ -53,6 +54,12 @@ export default function DashboardHeader({ onNewTask, onSearch, onNotificationTas
                     <span className="hidden md:block text-lg font-bold bg-gradient-to-r from-banana-600 to-grape-600 bg-clip-text text-transparent">
                         GoTodoBanana
                     </span>
+                    <Badge 
+                        variant="outline" 
+                        className="text-xs px-1.5 py-0 h-5 bg-banana-100 dark:bg-banana-900/30 text-banana-700 dark:text-banana-400 border-banana-300 dark:border-banana-700"
+                    >
+                        BETA
+                    </Badge>
                 </Link>
 
                 {/* Search */}
