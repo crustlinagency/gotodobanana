@@ -1,0 +1,41 @@
+{
+  "name": "Note",
+  "description": "A standalone note created by a user",
+  "properties": {
+    "userId": {
+      "type": "string",
+      "description": "ID of the user who owns this note (references User.id)"
+    },
+    "title": {
+      "type": "string",
+      "description": "The title of the note"
+    },
+    "content": {
+      "type": "string",
+      "description": "The rich text content of the note"
+    },
+    "priority": {
+      "type": "string",
+      "description": "Priority of the note (High, Medium, Low)"
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags associated with the note",
+      "items": {
+        "type": "string"
+      }
+    },
+    "order": {
+      "type": "number",
+      "description": "Position for sorting notes"
+    },
+    "deleted": {
+      "type": "boolean",
+      "description": "Whether the note is in the trash"
+    },
+    "deletedAt": {
+      "type": "string",
+      "description": "Timestamp when the note was deleted"
+    }
+  }
+}
