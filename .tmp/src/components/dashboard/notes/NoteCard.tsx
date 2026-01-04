@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Tag as TagIcon, MoreVertical } from "lucide-react";
+import { Tag as TagIcon } from "lucide-react";
 
 interface NoteCardProps {
   note: any;

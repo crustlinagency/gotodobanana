@@ -19,10 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Tag as TagIcon, MessageSquare, Info } from "lucide-react";
+import { Loader2, Tag as TagIcon, MessageSquare, Info, Paperclip, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import RichTextEditor from "../RichTextEditor";
 import TaskComments from "../TaskComments";
+import TaskAttachments from "../TaskAttachments";
+import DeleteConfirmDialog from "../DeleteConfirmDialog";
 
 interface NoteFormProps {
   open: boolean;
@@ -37,6 +39,7 @@ export default function NoteForm({ open, onOpenChange, note, onSuccess }: NoteFo
   const [priority, setPriority] = useState("Medium");
   const [tagsInput, setTagsInput] = useState("");
   const [activeTab, setActiveTab] = useState("details");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: user } = useQuery({
@@ -99,11 +102,35 @@ export default function NoteForm({ open, onOpenChange, note, onSuccess }: NoteFo
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!note?.id) return;
+      return await Note.update(note.id, { 
+        deleted: true,
+        deletedAt: new Date().toISOString()
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      toast.success("Note moved to trash");
+      onOpenChange(false);
+      if (onSuccess) onSuccess();
+    },
+    onError: (error: any) => {
+      console.error("Error deleting note:", error);
+      toast.error("Failed to delete note");
+    },
+  });
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim()) {
       saveMutation.mutate();
     }
+  };
+
+  const handleDelete = () => {
+    deleteMutation.mutate();
   };
 
   return (
@@ -124,13 +151,22 @@ export default function NoteForm({ open, onOpenChange, note, onSuccess }: NoteFo
                 Details
               </TabsTrigger>
               {note && (
-                <TabsTrigger 
-                  value="comments" 
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-banana-500 data-[state=active]:bg-transparent px-0 h-full"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Comments
-                </TabsTrigger>
+                <>
+                  <TabsTrigger 
+                    value="comments" 
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-banana-500 data-[state=active]:bg-transparent px-0 h-full"
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Comments
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="attachments" 
+                    className="rounded-none border-b-2 border-transparent data-[state=active]:border-banana-500 data-[state=active]:bg-transparent px-0 h-full"
+                  >
+                    <Paperclip className="h-4 w-4 mr-2" />
+                    Attachments
+                  </TabsTrigger>
+                </>
               )}
             </TabsList>
           </div>
@@ -190,21 +226,38 @@ export default function NoteForm({ open, onOpenChange, note, onSuccess }: NoteFo
             </TabsContent>
 
             {note && (
-              <TabsContent value="comments" className="mt-0">
-                <TaskComments noteId={note.id} />
-              </TabsContent>
+              <>
+                <TabsContent value="comments" className="mt-0">
+                  <TaskComments noteId={note.id} />
+                </TabsContent>
+                <TabsContent value="attachments" className="mt-0">
+                  <TaskAttachments noteId={note.id} />
+                </TabsContent>
+              </>
             )}
           </div>
         </Tabs>
 
         <DialogFooter className="p-6 pt-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          {note && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mr-auto text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saveMutation.isPending || deleteMutation.isPending}>
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             className="bg-banana-500 hover:bg-banana-600 text-black min-w-[100px]"
-            disabled={!title.trim() || saveMutation.isPending}
+            disabled={!title.trim() || saveMutation.isPending || deleteMutation.isPending}
           >
             {saveMutation.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -212,6 +265,15 @@ export default function NoteForm({ open, onOpenChange, note, onSuccess }: NoteFo
             {note ? "Update Note" : "Create Note"}
           </Button>
         </DialogFooter>
+
+        <DeleteConfirmDialog
+          open={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={handleDelete}
+          itemName={title}
+          itemType="note"
+          isLoading={deleteMutation.isPending}
+        />
       </DialogContent>
     </Dialog>
   );

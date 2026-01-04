@@ -23,14 +23,10 @@ export default function NotesToolbar({
   onFilterChange, 
   activeFilters, 
   tags,
-  noteCount
 }: NotesToolbarProps) {
   return (
     <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">
-          {noteCount} {noteCount === 1 ? 'Note' : 'Notes'}
-        </span>
       </div>
 
       <div className="flex items-center gap-2">

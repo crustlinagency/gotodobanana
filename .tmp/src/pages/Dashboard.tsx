@@ -258,8 +258,13 @@ export default function Dashboard() {
 
     useKeyboardShortcuts({
         onNewTask: () => {
-            handleNewTask();
-            toast.success("New task dialog opened (Ctrl+N)");
+            if (isNotesMode) {
+                handleNewNote();
+                toast.success("New note dialog opened (Ctrl+N)");
+            } else {
+                handleNewTask();
+                toast.success("New task dialog opened (Ctrl+N)");
+            }
         },
         onSearch: () => {
             const searchInput = document.querySelector('input[type="search"]') as HTMLInputElement;
@@ -269,8 +274,13 @@ export default function Dashboard() {
             }
         },
         onToggleFocus: () => {
-            setIsFocusMode(prev => !prev);
-            toast.success(isFocusMode ? "Focus Mode disabled (Ctrl+F)" : "Focus Mode enabled (Ctrl+F)");
+            if (!isNotesMode) {
+                setIsFocusMode(prev => {
+                    const next = !prev;
+                    toast.success(next ? "Focus Mode enabled (Ctrl+F)" : "Focus Mode disabled (Ctrl+F)");
+                    return next;
+                });
+            }
         },
     });
 
@@ -676,18 +686,30 @@ export default function Dashboard() {
             {isTaskFormOpen && (
                 <TaskForm
                     open={isTaskFormOpen}
-                    onOpenChange={setIsTaskFormOpen}
+                    onOpenChange={(open) => {
+                        setIsTaskFormOpen(open);
+                        if (!open) setEditingTask(null);
+                    }}
                     task={editingTask}
-                    onSuccess={() => setIsTaskFormOpen(false)}
+                    onSuccess={() => {
+                        setIsTaskFormOpen(false);
+                        setEditingTask(null);
+                    }}
                 />
             )}
 
             {isNoteFormOpen && (
                 <NoteForm
                     open={isNoteFormOpen}
-                    onOpenChange={setIsNoteFormOpen}
+                    onOpenChange={(open) => {
+                        setIsNoteFormOpen(open);
+                        if (!open) setEditingNote(null);
+                    }}
                     note={editingNote}
-                    onSuccess={() => setIsNoteFormOpen(false)}
+                    onSuccess={() => {
+                        setIsNoteFormOpen(false);
+                        setEditingNote(null);
+                    }}
                 />
             )}
         </div>
